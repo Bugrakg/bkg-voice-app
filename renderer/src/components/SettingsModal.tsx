@@ -11,7 +11,10 @@ type SettingsModalProps = {
   supportsOutputRouting: boolean;
   isLocallySpeaking: boolean;
   isPushToTalkActive: boolean;
+  diagnostics: string[];
   pushToTalkKey: string;
+  socketError: string;
+  socketStatus: string;
   voiceMode: VoiceMode;
   onEditableTagChange: (value: string) => void;
   onClose: () => void;
@@ -63,7 +66,10 @@ export function SettingsModal({
   supportsOutputRouting,
   isLocallySpeaking,
   isPushToTalkActive,
+  diagnostics,
   pushToTalkKey,
+  socketError,
+  socketStatus,
   voiceMode,
   onEditableTagChange,
   onClose,
@@ -241,6 +247,22 @@ export function SettingsModal({
             <button type="button" className="control-button" onClick={() => void onTestOutput()}>
               Test Sesi Cal
             </button>
+          </section>
+
+          <section className="settings-test">
+            <div>
+              <span>Tani Bilgileri</span>
+              <p className="muted">Socket durumu ve son uygulama loglari burada gorunur.</p>
+            </div>
+            <div className="diagnostics-panel">
+              <div className="diagnostics-panel__meta">
+                <strong>Socket: {socketStatus}</strong>
+                {socketError ? <span>{socketError}</span> : null}
+              </div>
+              <pre className="diagnostics-panel__log">
+                {diagnostics.length > 0 ? diagnostics.join("\n") : "Henuz tani logu yok."}
+              </pre>
+            </div>
           </section>
         </div>
       </section>

@@ -9,6 +9,7 @@ import type {
   RoomMembers,
   RoomPresenceEvent,
   RoomUser,
+  SocketStatus,
   VoiceMode
 } from "../types";
 
@@ -171,6 +172,9 @@ export function useVoiceRoom() {
   const [isPushToTalkActive, setIsPushToTalkActive] = useState(false);
   const [error, setError] = useState("");
   const [canOpenMicrophoneSettings, setCanOpenMicrophoneSettings] = useState(false);
+  const [socketStatus, setSocketStatus] = useState<SocketStatus>("idle");
+  const [socketError, setSocketError] = useState("");
+  const [diagnostics, setDiagnostics] = useState<string[]>([]);
 
   const socketRef = useRef<Socket | null>(null);
   const peersRef = useRef<PeerMap>(new Map());
@@ -190,6 +194,19 @@ export function useVoiceRoom() {
   const speakingMonitorRef = useRef<Awaited<
     ReturnType<typeof createSpeakingMonitor>
   > | null>(null);
+
+  function addDiagnosticLog(message: string) {
+    const timestamp = new Date().toLocaleTimeString("tr-TR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+
+    setDiagnostics((currentLogs) => {
+      const nextLogs = [`[${timestamp}] ${message}`, ...currentLogs];
+      return nextLogs.slice(0, 40);
+    });
+  }
 
   useEffect(() => {
     setSupportsOutputRouting(
@@ -403,11 +420,18 @@ export function useVoiceRoom() {
       return socketRef.current;
     }
 
-    const socket = io(getSignalingServerUrl(), {
+    const signalingUrl = getSignalingServerUrl();
+    setSocketStatus("connecting");
+    addDiagnosticLog(`Socket baglantisi baslatildi: ${signalingUrl}`);
+
+    const socket = io(signalingUrl, {
       transports: ["websocket", "polling"]
     });
 
     socket.on("connect", () => {
+      setSocketStatus("connected");
+      setSocketError("");
+      addDiagnosticLog(`Socket baglandi: ${socket.id}`);
       setSocketId(socket.id || "");
       if (tagRef.current) {
         socket.emit("set-tag", tagRef.current);
@@ -418,13 +442,24 @@ export function useVoiceRoom() {
     });
 
     socket.on("disconnect", () => {
+      setSocketStatus("idle");
+      addDiagnosticLog("Socket baglantisi koptu");
       setSocketId("");
       setRoomUsers([]);
       setRoomCounts(createInitialRoomCounts());
       setRoomMembers(createInitialRoomMembers());
     });
 
+    socket.on("connect_error", (connectError) => {
+      setSocketStatus("error");
+      setSocketError(connectError.message || "Socket baglantisi kurulamadi.");
+      addDiagnosticLog(
+        `Socket hata: ${connectError.message || "bilinmeyen baglanti hatasi"}`
+      );
+    });
+
     socket.on("room-counts", (counts: RoomCounts) => {
+      addDiagnosticLog("Oda sayilari alindi");
       setRoomCounts((currentCounts) => ({
         ...currentCounts,
         ...counts
@@ -432,6 +467,7 @@ export function useVoiceRoom() {
     });
 
     socket.on("room-members", (members: RoomMembers) => {
+      addDiagnosticLog("Oda uyeleri alindi");
       setRoomMembers((currentMembers) => ({
         ...currentMembers,
         ...members
@@ -439,6 +475,7 @@ export function useVoiceRoom() {
     });
 
     socket.on("user-list", (users: RoomUser[]) => {
+      addDiagnosticLog(`Aktif oda kullanici listesi geldi: ${users.length} kisi`);
       setRoomUsers(users);
       void syncPeerConnections(users);
     });
@@ -497,8 +534,62 @@ export function useVoiceRoom() {
     return socket;
   }
 
+  async function waitForSocketConnection(timeoutMs = 12000) {
+    const socket = getSocket();
+
+    if (socket.connected) {
+      return socket;
+    }
+
+    addDiagnosticLog("Socket baglantisi bekleniyor");
+
+    return new Promise<Socket>((resolve, reject) => {
+      let finished = false;
+
+      const handleConnect = () => {
+        if (finished) {
+          return;
+        }
+
+        finished = true;
+        cleanup();
+        resolve(socket);
+      };
+
+      const handleError = (connectError: Error) => {
+        if (finished) {
+          return;
+        }
+
+        finished = true;
+        cleanup();
+        reject(connectError);
+      };
+
+      const cleanup = () => {
+        window.clearTimeout(timerId);
+        socket.off("connect", handleConnect);
+        socket.off("connect_error", handleError);
+      };
+
+      const timerId = window.setTimeout(() => {
+        if (finished) {
+          return;
+        }
+
+        finished = true;
+        cleanup();
+        reject(new Error("Socket connection timeout"));
+      }, timeoutMs);
+
+      socket.on("connect", handleConnect);
+      socket.on("connect_error", handleError);
+    });
+  }
+
   async function ensureLocalStream(preferredDeviceId = selectedInputDeviceId) {
     if (localStreamRef.current) {
+      addDiagnosticLog("Mevcut mikrofon stream'i tekrar kullanildi");
       return localStreamRef.current;
     }
 
@@ -510,6 +601,7 @@ export function useVoiceRoom() {
         : "";
 
     if (requestedDeviceId && !targetDeviceId) {
+      addDiagnosticLog("Secili mikrofon bulunamadi, varsayilan mikrofona donuldu");
       window.localStorage.removeItem(STORAGE_KEYS.inputDeviceId);
       setSelectedInputDeviceId("");
       selectedInputDeviceIdRef.current = "";
@@ -518,6 +610,11 @@ export function useVoiceRoom() {
     let stream: MediaStream;
 
     try {
+      addDiagnosticLog(
+        targetDeviceId
+          ? "Secili mikrofon ile local stream aciliyor"
+          : "Varsayilan mikrofon ile local stream aciliyor"
+      );
       stream = await navigator.mediaDevices.getUserMedia({
         audio: createAudioConstraints(targetDeviceId)
       });
@@ -536,6 +633,7 @@ export function useVoiceRoom() {
       console.warn(
         "[audio] selected input device is no longer available, retrying with default microphone"
       );
+      addDiagnosticLog("Secili mikrofon acilamadi, varsayilan mikrofon ile tekrar deneniyor");
 
       window.localStorage.removeItem(STORAGE_KEYS.inputDeviceId);
       setSelectedInputDeviceId("");
@@ -545,6 +643,8 @@ export function useVoiceRoom() {
         audio: createAudioConstraints()
       });
     }
+
+    addDiagnosticLog("Local mikrofon stream'i hazir");
 
     const [track] = stream.getAudioTracks();
     if (track) {
@@ -859,6 +959,7 @@ export function useVoiceRoom() {
     setHasEntered(true);
     setError("");
     setCanOpenMicrophoneSettings(false);
+    addDiagnosticLog(`Kullanici adi girildi: ${trimmedTag}`);
 
     getSocket().emit("set-tag", trimmedTag);
     await refreshDevices();
@@ -869,18 +970,26 @@ export function useVoiceRoom() {
       setIsJoining(true);
       setError("");
       setCanOpenMicrophoneSettings(false);
-      getSocket();
+      addDiagnosticLog(`Odaya katilma denemesi: ${roomId}`);
+      await waitForSocketConnection();
       await ensureLocalStream();
+      addDiagnosticLog(`join-room emit edildi: ${roomId}`);
       socketRef.current?.emit("join-room", roomId);
       socketRef.current?.emit("mic-state", isMicEnabled);
       socketRef.current?.emit("audio-output-state", isOutputEnabled);
       setCurrentRoomId(roomId);
+      addDiagnosticLog(`Aktif oda secildi: ${roomId}`);
     } catch (joinError) {
       console.error(joinError);
       const friendlyError = getFriendlyMicrophoneError(joinError);
+      const joinErrorMessage =
+        joinError instanceof Error ? joinError.message : "Bilinmeyen hata";
+      addDiagnosticLog(`Odaya katilma hatasi: ${joinErrorMessage}`);
       setError(
         friendlyError?.message ||
-          "Odaya katilirken bir sorun oldu. Mikrofon iznini ve baglantini kontrol edip tekrar dene."
+          joinErrorMessage === "Socket connection timeout" || socketStatus === "error"
+            ? "Sunucuya baglanilamadi. Baglantini kontrol edip tekrar dene."
+            : "Odaya katilirken bir sorun oldu. Mikrofon iznini ve baglantini kontrol edip tekrar dene."
       );
       setCanOpenMicrophoneSettings(Boolean(friendlyError?.canOpenSettings));
     } finally {
@@ -928,6 +1037,9 @@ export function useVoiceRoom() {
     selectedInputDeviceIdRef.current = deviceId;
     setSelectedInputDeviceId(deviceId);
     window.localStorage.setItem(STORAGE_KEYS.inputDeviceId, deviceId);
+    addDiagnosticLog(
+      deviceId ? `Input cihaz secildi: ${deviceId}` : "Varsayilan input cihaza donuldu"
+    );
 
     if (localStreamRef.current) {
       await replaceInputTrack(deviceId);
@@ -938,6 +1050,9 @@ export function useVoiceRoom() {
     selectedOutputDeviceIdRef.current = deviceId;
     setSelectedOutputDeviceId(deviceId);
     window.localStorage.setItem(STORAGE_KEYS.outputDeviceId, deviceId);
+    addDiagnosticLog(
+      deviceId ? `Output cihaz secildi: ${deviceId}` : "Varsayilan output cihaza donuldu"
+    );
     await applyOutputPreferences();
   }
 
@@ -1002,6 +1117,7 @@ export function useVoiceRoom() {
     connectedUsers,
     currentRoomId,
     canOpenMicrophoneSettings,
+    diagnostics,
     enterApp,
     error,
     hasEntered,
@@ -1019,6 +1135,8 @@ export function useVoiceRoom() {
     roomCounts,
     roomMembers,
     roomUsers,
+    socketError,
+    socketStatus,
     remoteUserVolumes,
     selectedInputDeviceId,
     selectedOutputDeviceId,

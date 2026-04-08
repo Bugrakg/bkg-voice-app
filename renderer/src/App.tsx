@@ -9,6 +9,7 @@ export default function App() {
     connectedUsers,
     canOpenMicrophoneSettings,
     currentRoomId,
+    diagnostics,
     enterApp,
     error,
     hasEntered,
@@ -25,6 +26,8 @@ export default function App() {
     outputDevices,
     roomCounts,
     roomMembers,
+    socketError,
+    socketStatus,
     remoteUserVolumes,
     selectedInputDeviceId,
     selectedOutputDeviceId,
@@ -183,7 +186,10 @@ export default function App() {
           supportsOutputRouting={supportsOutputRouting}
           isLocallySpeaking={isLocallySpeaking}
           isPushToTalkActive={isPushToTalkActive}
+          diagnostics={diagnostics}
           pushToTalkKey={pushToTalkKey}
+          socketError={socketError}
+          socketStatus={socketStatus}
           voiceMode={voiceMode}
           onEditableTagChange={setEditableTag}
           onClose={() => setIsSettingsOpen(false)}

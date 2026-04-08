@@ -28,6 +28,7 @@ export type RoomPresenceEvent = {
 };
 
 export type VoiceMode = "open-mic" | "push-to-talk";
+export type SocketStatus = "idle" | "connecting" | "connected" | "error";
 
 declare global {
   interface Window {
