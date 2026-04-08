@@ -68,6 +68,7 @@ export function VoiceSidebar({
   onToggleRemoteUserMute
 }: VoiceSidebarProps) {
   const logoSrc = `${import.meta.env.BASE_URL}logo.png`;
+  const appVersion = window.voiceApp?.appVersion || "0.0.0";
   const [contextMenu, setContextMenu] = useState<{
     userId: string;
     tag: string;
@@ -223,6 +224,8 @@ export function VoiceSidebar({
           Ses ac/kapat yine calisir.
         </p>
       ) : null}
+
+      <p className="app-version">v{appVersion}</p>
 
       {contextMenu ? (
         <div

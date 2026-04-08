@@ -37,6 +37,16 @@ function readLabel(device: MediaDeviceInfo, fallback: string) {
   return device.label || `${fallback} ${device.deviceId.slice(0, 4)}`;
 }
 
+function hasDevice(
+  devices: MediaDeviceInfo[],
+  kind: MediaDeviceKind,
+  deviceId: string
+) {
+  return devices.some(
+    (device) => device.kind === kind && device.deviceId === deviceId
+  );
+}
+
 function isEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
     return false;
@@ -106,6 +116,23 @@ function getFriendlyMicrophoneError(error: unknown) {
   }
 
   return null;
+}
+
+function createAudioConstraints(deviceId?: string): MediaTrackConstraints {
+  const baseConstraints: MediaTrackConstraints = {
+    echoCancellation: true,
+    noiseSuppression: true,
+    autoGainControl: true
+  };
+
+  if (!deviceId) {
+    return baseConstraints;
+  }
+
+  return {
+    ...baseConstraints,
+    deviceId: { exact: deviceId }
+  };
 }
 
 export function useVoiceRoom() {
@@ -316,22 +343,39 @@ export function useVoiceRoom() {
 
   async function refreshDevices() {
     const devices = await navigator.mediaDevices.enumerateDevices();
-    setInputDevices(
-      devices
-        .filter((device) => device.kind === "audioinput")
-        .map((device) => ({
-          deviceId: device.deviceId,
-          label: readLabel(device, "Mic")
-        }))
-    );
-    setOutputDevices(
-      devices
-        .filter((device) => device.kind === "audiooutput")
-        .map((device) => ({
-          deviceId: device.deviceId,
-          label: readLabel(device, "Output")
-        }))
-    );
+    const nextInputDevices = devices
+      .filter((device) => device.kind === "audioinput")
+      .map((device) => ({
+        deviceId: device.deviceId,
+        label: readLabel(device, "Mic")
+      }));
+    const nextOutputDevices = devices
+      .filter((device) => device.kind === "audiooutput")
+      .map((device) => ({
+        deviceId: device.deviceId,
+        label: readLabel(device, "Output")
+      }));
+
+    setInputDevices(nextInputDevices);
+    setOutputDevices(nextOutputDevices);
+
+    if (
+      selectedInputDeviceIdRef.current &&
+      !hasDevice(devices, "audioinput", selectedInputDeviceIdRef.current)
+    ) {
+      selectedInputDeviceIdRef.current = "";
+      setSelectedInputDeviceId("");
+      window.localStorage.removeItem(STORAGE_KEYS.inputDeviceId);
+    }
+
+    if (
+      selectedOutputDeviceIdRef.current &&
+      !hasDevice(devices, "audiooutput", selectedOutputDeviceIdRef.current)
+    ) {
+      selectedOutputDeviceIdRef.current = "";
+      setSelectedOutputDeviceId("");
+      window.localStorage.removeItem(STORAGE_KEYS.outputDeviceId);
+    }
   }
 
   function getRemoteVolumeStorageKey(userId: string) {
@@ -475,23 +519,50 @@ export function useVoiceRoom() {
       return localStreamRef.current;
     }
 
-    const targetDeviceId = preferredDeviceId || selectedInputDeviceIdRef.current;
-    const constraints: MediaStreamConstraints = {
-      audio: targetDeviceId
-        ? {
-            deviceId: { exact: targetDeviceId },
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          }
-        : {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          }
-    };
+    const availableDevices = await navigator.mediaDevices.enumerateDevices();
+    const requestedDeviceId = preferredDeviceId || selectedInputDeviceIdRef.current;
+    const targetDeviceId =
+      requestedDeviceId && hasDevice(availableDevices, "audioinput", requestedDeviceId)
+        ? requestedDeviceId
+        : "";
 
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+    if (requestedDeviceId && !targetDeviceId) {
+      window.localStorage.removeItem(STORAGE_KEYS.inputDeviceId);
+      setSelectedInputDeviceId("");
+      selectedInputDeviceIdRef.current = "";
+    }
+
+    let stream: MediaStream;
+
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: createAudioConstraints(targetDeviceId)
+      });
+    } catch (error) {
+      const canRetryWithDefaultMic =
+        Boolean(targetDeviceId) &&
+        error instanceof DOMException &&
+        (error.name === "NotFoundError" ||
+          error.name === "DevicesNotFoundError" ||
+          error.name === "OverconstrainedError");
+
+      if (!canRetryWithDefaultMic) {
+        throw error;
+      }
+
+      console.warn(
+        "[audio] selected input device is no longer available, retrying with default microphone"
+      );
+
+      window.localStorage.removeItem(STORAGE_KEYS.inputDeviceId);
+      setSelectedInputDeviceId("");
+      selectedInputDeviceIdRef.current = "";
+
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: createAudioConstraints()
+      });
+    }
+
     const [track] = stream.getAudioTracks();
     if (track) {
       track.enabled = shouldTransmitMic();
@@ -871,17 +942,20 @@ export function useVoiceRoom() {
   }
 
   async function changeInputDevice(deviceId: string) {
+    selectedInputDeviceIdRef.current = deviceId;
     setSelectedInputDeviceId(deviceId);
     window.localStorage.setItem(STORAGE_KEYS.inputDeviceId, deviceId);
 
-    if (currentRoomId) {
+    if (localStreamRef.current) {
       await replaceInputTrack(deviceId);
     }
   }
 
   async function changeOutputDevice(deviceId: string) {
+    selectedOutputDeviceIdRef.current = deviceId;
     setSelectedOutputDeviceId(deviceId);
     window.localStorage.setItem(STORAGE_KEYS.outputDeviceId, deviceId);
+    await applyOutputPreferences();
   }
 
   async function startMicTest() {

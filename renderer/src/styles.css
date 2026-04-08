@@ -757,6 +757,14 @@ select {
   color: #fca5a5;
 }
 
+.app-version {
+  margin: 2px 0 0;
+  text-align: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: rgba(156, 163, 175, 0.72);
+}
+
 @keyframes pulse-ring {
   0%,
   100% {

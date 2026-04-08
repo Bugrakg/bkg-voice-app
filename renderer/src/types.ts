@@ -35,6 +35,7 @@ declare global {
       debugPtt: boolean;
       platform: string;
       nodeEnv: string;
+      appVersion: string;
       serverUrl: string;
       onPushToTalkDown?: (callback: () => void) => () => void;
       onPushToTalkUp?: (callback: () => void) => () => void;

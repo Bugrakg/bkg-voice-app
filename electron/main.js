@@ -1,5 +1,5 @@
 const path = require("path");
-const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, Menu, shell } = require("electron");
 const { autoUpdater } = require("electron-updater");
 
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
@@ -30,6 +30,8 @@ function logPtt(message, extra) {
 }
 
 function createMainWindow() {
+  Menu.setApplicationMenu(null);
+
   const window = new BrowserWindow({
     width: 500,
     height: 860,
@@ -37,6 +39,7 @@ function createMainWindow() {
     minHeight: 520,
     backgroundColor: "#111317",
     title: "BKG Voice App",
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,

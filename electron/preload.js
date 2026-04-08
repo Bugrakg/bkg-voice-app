@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld("voiceApp", {
   platform: process.platform,
   debugPtt: process.env.DEBUG_PTT === "true",
   nodeEnv: process.env.NODE_ENV || "development",
+  appVersion: process.env.npm_package_version || require("../package.json").version,
   serverUrl:
     process.env.SIGNALING_SERVER_URL ||
     (isDev ? "" : defaultProductionServerUrl),
