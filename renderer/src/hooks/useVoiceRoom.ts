@@ -73,6 +73,41 @@ function getAppliedRemoteVolume(volume: number) {
   return Math.min(1, 0.12 + Math.pow(clampedVolume, 0.72) * 0.88);
 }
 
+function getFriendlyMicrophoneError(error: unknown) {
+  if (!(error instanceof DOMException)) {
+    return null;
+  }
+
+  if (
+    error.name === "NotAllowedError" ||
+    error.name === "PermissionDeniedError" ||
+    error.name === "SecurityError"
+  ) {
+    return {
+      message:
+        "Mikrofon izni kapali görünüyor. Windows ayarlarından mikrofon erişimini açıp tekrar dene.",
+      canOpenSettings: true
+    };
+  }
+
+  if (error.name === "NotFoundError" || error.name === "DevicesNotFoundError") {
+    return {
+      message: "Kullanılabilir bir mikrofon bulunamadı. Mikrofonunu takıp tekrar dene.",
+      canOpenSettings: false
+    };
+  }
+
+  if (error.name === "NotReadableError" || error.name === "TrackStartError") {
+    return {
+      message:
+        "Mikrofon şu anda başka bir uygulama tarafından kullanılıyor olabilir. Diğer ses uygulamalarını kapatıp tekrar dene.",
+      canOpenSettings: false
+    };
+  }
+
+  return null;
+}
+
 export function useVoiceRoom() {
   const [hasEntered, setHasEntered] = useState(false);
   const [tag, setTagState] = useState(() => getStoredValue(STORAGE_KEYS.tag));
@@ -108,6 +143,7 @@ export function useVoiceRoom() {
   );
   const [isPushToTalkActive, setIsPushToTalkActive] = useState(false);
   const [error, setError] = useState("");
+  const [canOpenMicrophoneSettings, setCanOpenMicrophoneSettings] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const peersRef = useRef<PeerMap>(new Map());
@@ -760,6 +796,7 @@ export function useVoiceRoom() {
     const trimmedTag = nextTag.trim().slice(0, 24);
     if (!trimmedTag) {
       setError("Kullanici adi bos olamaz.");
+      setCanOpenMicrophoneSettings(false);
       return;
     }
 
@@ -767,6 +804,7 @@ export function useVoiceRoom() {
     setTagState(trimmedTag);
     setHasEntered(true);
     setError("");
+    setCanOpenMicrophoneSettings(false);
 
     getSocket().emit("set-tag", trimmedTag);
     await refreshDevices();
@@ -776,6 +814,7 @@ export function useVoiceRoom() {
     try {
       setIsJoining(true);
       setError("");
+      setCanOpenMicrophoneSettings(false);
       getSocket();
       await ensureLocalStream();
       socketRef.current?.emit("join-room", roomId);
@@ -784,7 +823,12 @@ export function useVoiceRoom() {
       setCurrentRoomId(roomId);
     } catch (joinError) {
       console.error(joinError);
-      setError("Mikrofon izni alinmadi veya baglanti kurulurken hata oldu.");
+      const friendlyError = getFriendlyMicrophoneError(joinError);
+      setError(
+        friendlyError?.message ||
+          "Odaya katilirken bir sorun oldu. Mikrofon iznini ve baglantini kontrol edip tekrar dene."
+      );
+      setCanOpenMicrophoneSettings(Boolean(friendlyError?.canOpenSettings));
     } finally {
       setIsJoining(false);
     }
@@ -842,12 +886,18 @@ export function useVoiceRoom() {
 
   async function startMicTest() {
     setError("");
+    setCanOpenMicrophoneSettings(false);
 
     try {
       await ensureLocalStream();
     } catch (micError) {
       console.error(micError);
-      setError("Mikrofon izni alinmadi veya mic test baslatilamadi.");
+      const friendlyError = getFriendlyMicrophoneError(micError);
+      setError(
+        friendlyError?.message ||
+          "Mikrofon testi baslatilamadi. Mikrofon iznini ve cihaz baglantini kontrol et."
+      );
+      setCanOpenMicrophoneSettings(Boolean(friendlyError?.canOpenSettings));
     }
   }
 
@@ -857,6 +907,10 @@ export function useVoiceRoom() {
     }
 
     await cleanupLocalStreamOnly();
+  }
+
+  async function openMicrophoneSettings() {
+    await window.voiceApp?.openMicrophonePrivacySettings?.();
   }
 
   function changeVoiceMode(nextVoiceMode: VoiceMode) {
@@ -890,6 +944,7 @@ export function useVoiceRoom() {
   return {
     connectedUsers,
     currentRoomId,
+    canOpenMicrophoneSettings,
     enterApp,
     error,
     hasEntered,
@@ -919,6 +974,7 @@ export function useVoiceRoom() {
     updateTag,
     changeInputDevice,
     changeOutputDevice,
+    openMicrophoneSettings,
     startMicTest,
     stopMicTest,
     setRemoteUserVolume,

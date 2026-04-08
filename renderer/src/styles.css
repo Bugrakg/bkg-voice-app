@@ -738,6 +738,21 @@ select {
   margin: 0;
 }
 
+.error-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.error-panel__button {
+  width: 100%;
+  background: #362424;
+  color: #ffd3d3;
+}
+
+.error-panel__button:hover {
+  background: #4a2d2d;
+}
+
 .error-text {
   color: #fca5a5;
 }

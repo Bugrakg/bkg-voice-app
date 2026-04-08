@@ -7,6 +7,7 @@ import { useVoiceRoom } from "./hooks/useVoiceRoom";
 export default function App() {
   const {
     connectedUsers,
+    canOpenMicrophoneSettings,
     currentRoomId,
     enterApp,
     error,
@@ -36,6 +37,7 @@ export default function App() {
     updateTag,
     changeInputDevice,
     changeOutputDevice,
+    openMicrophoneSettings,
     startMicTest,
     stopMicTest,
     setRemoteUserVolume,
@@ -158,12 +160,14 @@ export default function App() {
         pushToTalkKey={pushToTalkKey}
         voiceMode={voiceMode}
         error={error}
+        canOpenMicrophoneSettings={canOpenMicrophoneSettings}
         supportsOutputRouting={supportsOutputRouting}
         remoteUserVolumes={remoteUserVolumes}
         onJoinRoom={joinRoom}
         onToggleMic={toggleMic}
         onToggleOutput={toggleOutput}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenMicrophoneSettings={openMicrophoneSettings}
         onLeaveRoom={leaveRoom}
         onRemoteUserVolumeChange={setRemoteUserVolume}
         onToggleRemoteUserMute={toggleRemoteUserMute}

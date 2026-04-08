@@ -35,12 +35,14 @@ declare global {
       debugPtt: boolean;
       platform: string;
       nodeEnv: string;
+      serverUrl: string;
       onPushToTalkDown?: (callback: () => void) => () => void;
       onPushToTalkUp?: (callback: () => void) => () => void;
       setPushToTalkShortcut?: (shortcut: string) => Promise<{
         ok: boolean;
         shortcut: string;
       }>;
+      openMicrophonePrivacySettings?: () => Promise<boolean>;
       versions: {
         chrome: string;
         electron: string;

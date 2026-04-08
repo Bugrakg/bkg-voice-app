@@ -4,7 +4,11 @@ function readRendererEnv(name: string) {
 }
 
 export function getSignalingServerUrl() {
-  return readRendererEnv("VITE_SIGNALING_SERVER_URL") || "http://localhost:3000";
+  if (window.voiceApp?.serverUrl) {
+    return window.voiceApp.serverUrl;
+  }
+
+  return readRendererEnv("VITE_SIGNALING_SERVER_URL") || "http://localhost:3001";
 }
 
 export function getNodeEnv() {

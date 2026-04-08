@@ -27,12 +27,14 @@ type VoiceSidebarProps = {
   pushToTalkKey: string;
   voiceMode: VoiceMode;
   error: string;
+  canOpenMicrophoneSettings: boolean;
   supportsOutputRouting: boolean;
   remoteUserVolumes: Record<string, number>;
   onJoinRoom: (room: string) => void | Promise<void>;
   onToggleMic: () => void | Promise<void>;
   onToggleOutput: () => void | Promise<void>;
   onOpenSettings: () => void;
+  onOpenMicrophoneSettings: () => void | Promise<void>;
   onLeaveRoom: () => void | Promise<void>;
   onRemoteUserVolumeChange: (userId: string, volume: number) => void | Promise<void>;
   onToggleRemoteUserMute: (userId: string) => void | Promise<void>;
@@ -53,12 +55,14 @@ export function VoiceSidebar({
   pushToTalkKey,
   voiceMode,
   error,
+  canOpenMicrophoneSettings,
   supportsOutputRouting,
   remoteUserVolumes,
   onJoinRoom,
   onToggleMic,
   onToggleOutput,
   onOpenSettings,
+  onOpenMicrophoneSettings,
   onLeaveRoom,
   onRemoteUserVolumeChange,
   onToggleRemoteUserMute
@@ -199,7 +203,20 @@ export function VoiceSidebar({
         </div>
       </div>
 
-      {error ? <p className="error-text">{error}</p> : null}
+      {error ? (
+        <div className="error-panel">
+          <p className="error-text">{error}</p>
+          {canOpenMicrophoneSettings ? (
+            <button
+              type="button"
+              className="control-button error-panel__button"
+              onClick={() => void onOpenMicrophoneSettings()}
+            >
+              Mikrofon iznini ac
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {!supportsOutputRouting ? (
         <p className="muted help-text">
           Output device secimi bu platform/browser kombinasyonunda kisitli olabilir.

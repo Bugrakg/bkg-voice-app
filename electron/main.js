@@ -1,5 +1,5 @@
 const path = require("path");
-const { app, BrowserWindow, dialog, ipcMain } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const { autoUpdater } = require("electron-updater");
 
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
@@ -171,6 +171,26 @@ function getDialogWindow() {
   return undefined;
 }
 
+async function openMicrophonePrivacySettings() {
+  try {
+    if (process.platform === "win32") {
+      await shell.openExternal("ms-settings:privacy-microphone");
+      return true;
+    }
+
+    if (process.platform === "darwin") {
+      await shell.openExternal(
+        "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+      );
+      return true;
+    }
+  } catch (error) {
+    console.error("[permissions] failed to open microphone settings", error);
+  }
+
+  return false;
+}
+
 function setupAutoUpdates() {
   if (isDev) {
     console.log("[updater] Development mode detected, auto-update disabled.");
@@ -274,6 +294,10 @@ ipcMain.handle("set-push-to-talk-shortcut", (_event, shortcut) => {
     ok,
     shortcut: pushToTalkShortcut
   };
+});
+
+ipcMain.handle("open-microphone-privacy-settings", () => {
+  return openMicrophonePrivacySettings();
 });
 
 app.on("window-all-closed", () => {
