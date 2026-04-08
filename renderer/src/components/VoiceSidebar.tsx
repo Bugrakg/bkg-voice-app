@@ -63,6 +63,7 @@ export function VoiceSidebar({
   onRemoteUserVolumeChange,
   onToggleRemoteUserMute
 }: VoiceSidebarProps) {
+  const logoSrc = `${import.meta.env.BASE_URL}logo.png`;
   const [contextMenu, setContextMenu] = useState<{
     userId: string;
     tag: string;
@@ -85,7 +86,7 @@ export function VoiceSidebar({
       <div className="panel-heading">
         <div className="sidebar-brand">
           <div className="brand-mark brand-mark--sidebar" aria-hidden="true">
-            <img src="/logo.png" alt="" className="brand-mark__image" />
+            <img src={logoSrc} alt="" className="brand-mark__image" />
           </div>
           <div className="sidebar-brand__text">
             <strong>BKG Voice App</strong>

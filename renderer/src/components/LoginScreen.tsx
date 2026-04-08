@@ -13,12 +13,14 @@ export function LoginScreen({
   onTagChange,
   onSubmit
 }: LoginScreenProps) {
+  const logoSrc = `${import.meta.env.BASE_URL}logo.png`;
+
   return (
     <main className="auth-shell">
       <section className="auth-card">
         <div className="auth-hero">
           <div className="brand-mark brand-mark--hero" aria-hidden="true">
-            <img src="/logo.png" alt="" className="brand-mark__image" />
+            <img src={logoSrc} alt="" className="brand-mark__image" />
           </div>
         </div>
         <p className="auth-brand-name">BKG Voice App</p>
