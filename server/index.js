@@ -235,6 +235,7 @@ io.on("connection", (socket) => {
 
     user.micEnabled = Boolean(micEnabled);
     emitUserList(user.roomId);
+    emitRoomMembers();
   });
 
   socket.on("audio-output-state", (audioOutputEnabled) => {
@@ -245,6 +246,7 @@ io.on("connection", (socket) => {
 
     user.audioOutputEnabled = Boolean(audioOutputEnabled);
     emitUserList(user.roomId);
+    emitRoomMembers();
   });
 
   socket.on("speaking-state", (speaking) => {
@@ -255,6 +257,7 @@ io.on("connection", (socket) => {
 
     user.speaking = Boolean(speaking);
     emitUserList(user.roomId);
+    emitRoomMembers();
   });
 
   socket.on("webrtc-offer", (payload) => {

@@ -52,6 +52,7 @@ export function useVoiceRoom() {
   const [isOutputEnabled, setIsOutputEnabled] = useState(true);
   const [inputDevices, setInputDevices] = useState<DeviceOption[]>([]);
   const [outputDevices, setOutputDevices] = useState<DeviceOption[]>([]);
+  const [remoteUserVolumes, setRemoteUserVolumes] = useState<Record<string, number>>({});
   const [selectedInputDeviceId, setSelectedInputDeviceId] = useState(() =>
     getStoredValue(STORAGE_KEYS.inputDeviceId)
   );
@@ -75,6 +76,7 @@ export function useVoiceRoom() {
   const selectedOutputDeviceIdRef = useRef(selectedOutputDeviceId);
   const micEnabledRef = useRef(isMicEnabled);
   const selectedInputDeviceIdRef = useRef(selectedInputDeviceId);
+  const remoteUserVolumesRef = useRef<Record<string, number>>({});
   const speakingMonitorRef = useRef<Awaited<
     ReturnType<typeof createSpeakingMonitor>
   > | null>(null);
@@ -125,6 +127,10 @@ export function useVoiceRoom() {
     selectedInputDeviceIdRef.current = selectedInputDeviceId;
   }, [selectedInputDeviceId]);
 
+  useEffect(() => {
+    remoteUserVolumesRef.current = remoteUserVolumes;
+  }, [remoteUserVolumes]);
+
   const connectedUsers = useMemo(
     () => roomUsers.filter((user) => user.roomId === currentRoomId),
     [currentRoomId, roomUsers]
@@ -148,6 +154,29 @@ export function useVoiceRoom() {
           label: readLabel(device, "Output")
         }))
     );
+  }
+
+  function getRemoteVolumeStorageKey(userId: string) {
+    return `${STORAGE_KEYS.remoteVolumePrefix}:${userId}`;
+  }
+
+  function getRemoteVolumeBackupStorageKey(userId: string) {
+    return `${STORAGE_KEYS.remoteVolumeBackupPrefix}:${userId}`;
+  }
+
+  function getRemoteUserVolume(userId: string) {
+    const stateValue = remoteUserVolumesRef.current[userId];
+    if (typeof stateValue === "number") {
+      return stateValue;
+    }
+
+    const storedValue = window.localStorage.getItem(getRemoteVolumeStorageKey(userId));
+    const parsedValue = Number(storedValue);
+    if (Number.isFinite(parsedValue)) {
+      return Math.max(0, Math.min(1, parsedValue));
+    }
+
+    return 1;
   }
 
   function getSocket() {
@@ -364,7 +393,7 @@ export function useVoiceRoom() {
       const audioElement = getOrCreateAudioElement(remoteUserId);
       audioElement.srcObject = stream;
       audioElement.muted = false;
-      audioElement.volume = outputEnabledRef.current ? 1 : 0;
+      audioElement.volume = outputEnabledRef.current ? getRemoteUserVolume(remoteUserId) : 0;
       void audioElement.play().catch(() => undefined);
       void applySinkId(audioElement);
     };
@@ -446,10 +475,49 @@ export function useVoiceRoom() {
   }
 
   async function applyOutputPreferences() {
-    for (const audioElement of audioElementsRef.current.values()) {
-      audioElement.volume = outputEnabledRef.current ? 1 : 0;
+    for (const [peerId, audioElement] of audioElementsRef.current.entries()) {
+      audioElement.volume = outputEnabledRef.current ? getRemoteUserVolume(peerId) : 0;
       await applySinkId(audioElement);
     }
+  }
+
+  async function setRemoteUserVolume(userId: string, volume: number) {
+    const normalizedVolume = Math.max(0, Math.min(1, volume));
+
+    setRemoteUserVolumes((currentVolumes) => ({
+      ...currentVolumes,
+      [userId]: normalizedVolume
+    }));
+
+    window.localStorage.setItem(
+      getRemoteVolumeStorageKey(userId),
+      String(normalizedVolume)
+    );
+
+    const audioElement = audioElementsRef.current.get(userId);
+    if (audioElement) {
+      audioElement.volume = outputEnabledRef.current ? normalizedVolume : 0;
+    }
+  }
+
+  async function toggleRemoteUserMute(userId: string) {
+    const currentVolume = getRemoteUserVolume(userId);
+
+    if (currentVolume <= 0.001) {
+      const storedBackup = Number(
+        window.localStorage.getItem(getRemoteVolumeBackupStorageKey(userId))
+      );
+      const nextVolume =
+        Number.isFinite(storedBackup) && storedBackup > 0 ? storedBackup : 1;
+      await setRemoteUserVolume(userId, nextVolume);
+      return;
+    }
+
+    window.localStorage.setItem(
+      getRemoteVolumeBackupStorageKey(userId),
+      String(currentVolume)
+    );
+    await setRemoteUserVolume(userId, 0);
   }
 
   function destroyPeer(remoteUserId: string) {
@@ -639,6 +707,7 @@ export function useVoiceRoom() {
     roomCounts,
     roomMembers,
     roomUsers,
+    remoteUserVolumes,
     selectedInputDeviceId,
     selectedOutputDeviceId,
     setTagState,
@@ -649,6 +718,8 @@ export function useVoiceRoom() {
     toggleOutput,
     updateTag,
     changeInputDevice,
-    changeOutputDevice
+    changeOutputDevice,
+    setRemoteUserVolume,
+    toggleRemoteUserMute
   };
 }

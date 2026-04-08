@@ -21,6 +21,7 @@ export default function App() {
     outputDevices,
     roomCounts,
     roomMembers,
+    remoteUserVolumes,
     selectedInputDeviceId,
     selectedOutputDeviceId,
     setTagState,
@@ -31,7 +32,9 @@ export default function App() {
     toggleOutput,
     updateTag,
     changeInputDevice,
-    changeOutputDevice
+    changeOutputDevice,
+    setRemoteUserVolume,
+    toggleRemoteUserMute
   } = useVoiceRoom();
 
   const [loginTag, setLoginTag] = useState(tag);
@@ -137,11 +140,14 @@ export default function App() {
         isOutputEnabled={isOutputEnabled}
         error={error}
         supportsOutputRouting={supportsOutputRouting}
+        remoteUserVolumes={remoteUserVolumes}
         onJoinRoom={joinRoom}
         onToggleMic={toggleMic}
         onToggleOutput={toggleOutput}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onLeaveRoom={leaveRoom}
+        onRemoteUserVolumeChange={setRemoteUserVolume}
+        onToggleRemoteUserMute={toggleRemoteUserMute}
       />
 
       {isSettingsOpen ? (

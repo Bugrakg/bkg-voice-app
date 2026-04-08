@@ -4,11 +4,15 @@ import { HeadphoneOffIcon, MicOffIcon } from "./icons/AppIcons";
 type UserRowProps = {
   user: RoomUser;
   isSelf: boolean;
+  onContextMenu?: (event: React.MouseEvent<HTMLElement>) => void;
 };
 
-export function UserRow({ user, isSelf }: UserRowProps) {
+export function UserRow({ user, isSelf, onContextMenu }: UserRowProps) {
   return (
-    <article className={`user-row ${user.speaking ? "user-row--speaking" : ""}`}>
+    <article
+      className={`user-row ${user.speaking ? "user-row--speaking" : ""}`}
+      onContextMenu={onContextMenu}
+    >
       <div className="user-row__main">
         <strong>{user.tag}</strong>
         {isSelf ? <span className="pill">Siz</span> : null}

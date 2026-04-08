@@ -1,4 +1,5 @@
 import type { RoomCounts, RoomMembers, RoomUser } from "../types";
+import { useEffect, useState } from "react";
 import { IconButton } from "./IconButton";
 import {
   ExitIcon,
@@ -24,11 +25,14 @@ type VoiceSidebarProps = {
   isOutputEnabled: boolean;
   error: string;
   supportsOutputRouting: boolean;
+  remoteUserVolumes: Record<string, number>;
   onJoinRoom: (room: string) => void | Promise<void>;
   onToggleMic: () => void | Promise<void>;
   onToggleOutput: () => void | Promise<void>;
   onOpenSettings: () => void;
   onLeaveRoom: () => void | Promise<void>;
+  onRemoteUserVolumeChange: (userId: string, volume: number) => void | Promise<void>;
+  onToggleRemoteUserMute: (userId: string) => void | Promise<void>;
 };
 
 export function VoiceSidebar({
@@ -44,12 +48,32 @@ export function VoiceSidebar({
   isOutputEnabled,
   error,
   supportsOutputRouting,
+  remoteUserVolumes,
   onJoinRoom,
   onToggleMic,
   onToggleOutput,
   onOpenSettings,
-  onLeaveRoom
+  onLeaveRoom,
+  onRemoteUserVolumeChange,
+  onToggleRemoteUserMute
 }: VoiceSidebarProps) {
+  const [contextMenu, setContextMenu] = useState<{
+    userId: string;
+    tag: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const closeMenu = () => setContextMenu(null);
+    window.addEventListener("click", closeMenu);
+    window.addEventListener("scroll", closeMenu);
+    return () => {
+      window.removeEventListener("click", closeMenu);
+      window.removeEventListener("scroll", closeMenu);
+    };
+  }, []);
+
   return (
     <section className="sidebar sidebar--full">
       <div className="panel-heading">
@@ -66,32 +90,54 @@ export function VoiceSidebar({
       </div>
 
       <div className="room-list">
-        {ROOMS.map((room) => (
-          <section
-            key={room}
-            className={`room-group ${currentRoomId === room ? "room-group--active" : ""}`}
-          >
-            <button
-              type="button"
-              className={`room-button ${currentRoomId === room ? "room-button--active" : ""}`}
-              onClick={() => void onJoinRoom(room)}
-              disabled={isJoining}
-            >
-              <span>{room}</span>
-              <small>{roomCounts[room] ?? 0}</small>
-            </button>
+        {ROOMS.map((room) => {
+          const displayedUsers =
+            currentRoomId === room ? connectedUsers : roomMembers[room] || [];
 
-            <div className="room-members">
-              {(roomMembers[room] || []).length > 0 ? (
-                (roomMembers[room] || []).map((user) => (
-                  <UserRow key={user.id} user={user} isSelf={user.id === socketId} />
-                ))
-              ) : (
-                <p className="room-members__empty">Bos</p>
-              )}
-            </div>
-          </section>
-        ))}
+          return (
+            <section
+              key={room}
+              className={`room-group ${currentRoomId === room ? "room-group--active" : ""}`}
+            >
+              <button
+                type="button"
+                className={`room-button ${currentRoomId === room ? "room-button--active" : ""}`}
+                onClick={() => void onJoinRoom(room)}
+                disabled={isJoining}
+              >
+                <span>{room}</span>
+                <small>{roomCounts[room] ?? 0}</small>
+              </button>
+
+              <div className="room-members">
+                {displayedUsers.length > 0 ? (
+                  displayedUsers.map((user) => (
+                    <UserRow
+                      key={user.id}
+                      user={user}
+                      isSelf={user.id === socketId}
+                      onContextMenu={
+                        user.id === socketId
+                          ? undefined
+                          : (event) => {
+                              event.preventDefault();
+                              setContextMenu({
+                                userId: user.id,
+                                tag: user.tag,
+                                x: event.clientX,
+                                y: event.clientY
+                              });
+                            }
+                      }
+                    />
+                  ))
+                ) : (
+                  <p className="room-members__empty">Bos</p>
+                )}
+              </div>
+            </section>
+          );
+        })}
       </div>
 
       <div className="sidebar-footer">
@@ -138,6 +184,41 @@ export function VoiceSidebar({
           Output device secimi bu platform/browser kombinasyonunda kisitli olabilir.
           Ses ac/kapat yine calisir.
         </p>
+      ) : null}
+
+      {contextMenu ? (
+        <div
+          className="user-context-menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <p className="user-context-menu__title">{contextMenu.tag}</p>
+          <label className="user-context-menu__field">
+            <span>Ses Duzeyi</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={Math.round((remoteUserVolumes[contextMenu.userId] ?? 1) * 100)}
+              onChange={(event) =>
+                void onRemoteUserVolumeChange(
+                  contextMenu.userId,
+                  Number(event.target.value) / 100
+                )
+              }
+            />
+          </label>
+          <button
+            type="button"
+            className="user-context-menu__button"
+            onClick={() => void onToggleRemoteUserMute(contextMenu.userId)}
+          >
+            {(remoteUserVolumes[contextMenu.userId] ?? 1) <= 0.001
+              ? "Sesi Geri Ac"
+              : "Sessize Al"}
+          </button>
+        </div>
       ) : null}
     </section>
   );

@@ -283,6 +283,10 @@ select {
   color: #cbd5e1;
 }
 
+.user-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .user-row::after {
   content: "";
   position: absolute;
@@ -333,6 +337,50 @@ select {
 
 .status-icon--off {
   color: #fca5a5;
+}
+
+.user-context-menu {
+  position: fixed;
+  z-index: 1000;
+  width: 180px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(16, 19, 24, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
+}
+
+.user-context-menu__title {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.user-context-menu__field {
+  display: grid;
+  gap: 8px;
+}
+
+.user-context-menu__field span {
+  color: #9ca3af;
+  font-size: 0.76rem;
+}
+
+.user-context-menu__field input[type="range"] {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  accent-color: #7ee787;
+}
+
+.user-context-menu__button {
+  width: 100%;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: #2a1c1c;
+  color: #ffb4b4;
+  padding: 10px 12px;
 }
 
 .sidebar-footer {
