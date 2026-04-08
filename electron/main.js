@@ -1,8 +1,10 @@
 const path = require("path");
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain } = require("electron");
+const { autoUpdater } = require("electron-updater");
 
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
 const debugPtt = process.env.DEBUG_PTT === "true";
+const hasGitHubToken = Boolean(process.env.GH_TOKEN);
 let mainWindow = null;
 let pushToTalkShortcut = "V";
 let pushToTalkKeycode = null;
@@ -12,6 +14,7 @@ let UiohookKey = null;
 let uiohookStarted = false;
 let keydownListener = null;
 let keyupListener = null;
+let hasShownUpdateDialog = false;
 
 function logPtt(message, extra) {
   if (!debugPtt) {
@@ -153,13 +156,105 @@ function setupPushToTalkListeners() {
   uIOhook.on("keyup", keyupListener);
   uIOhook.start();
   uiohookStarted = true;
-  logPtt("listener started", { shortcut: pushToTalkShortcut, keycode: pushToTalkKeycode });
+  logPtt("listener started", {
+    shortcut: pushToTalkShortcut,
+    keycode: pushToTalkKeycode
+  });
   return true;
+}
+
+function getDialogWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    return mainWindow;
+  }
+
+  return undefined;
+}
+
+function setupAutoUpdates() {
+  if (isDev) {
+    console.log("[updater] Development mode detected, auto-update disabled.");
+    return;
+  }
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = false;
+
+  autoUpdater.on("checking-for-update", () => {
+    console.log("[updater] checking-for-update");
+  });
+
+  autoUpdater.on("update-available", (info) => {
+    console.log("[updater] update-available", info.version);
+  });
+
+  autoUpdater.on("update-not-available", (info) => {
+    console.log("[updater] update-not-available", info.version);
+  });
+
+  autoUpdater.on("error", (error) => {
+    console.error("[updater] error", error);
+  });
+
+  autoUpdater.on("download-progress", (progress) => {
+    console.log(
+      `[updater] download-progress ${Math.round(progress.percent)}% (${Math.round(
+        progress.bytesPerSecond
+      )} B/s)`
+    );
+  });
+
+  autoUpdater.on("update-downloaded", async (info) => {
+    console.log("[updater] update-downloaded", info.version);
+
+    if (hasShownUpdateDialog) {
+      return;
+    }
+
+    hasShownUpdateDialog = true;
+    const result = await dialog.showMessageBox(getDialogWindow(), {
+      type: "info",
+      buttons: ["Simdi guncelle", "Sonra"],
+      defaultId: 0,
+      cancelId: 1,
+      title: "Guncelleme hazir",
+      message: "Yeni surum indirildi.",
+      detail: "Uygulamayi simdi yeniden baslatip guncellemek ister misin?"
+    });
+
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall();
+      return;
+    }
+
+    hasShownUpdateDialog = false;
+  });
+
+  const checkForUpdates = async () => {
+    try {
+      if (!hasGitHubToken) {
+        console.warn(
+          "[updater] GH_TOKEN not set. Public GitHub releases can still work, but private access will fail."
+        );
+      }
+
+      await autoUpdater.checkForUpdates();
+    } catch (error) {
+      console.error("[updater] checkForUpdates failed", error);
+    }
+  };
+
+  app.whenReady().then(() => {
+    setTimeout(() => {
+      void checkForUpdates();
+    }, 3000);
+  });
 }
 
 app.whenReady().then(() => {
   createMainWindow();
   setupPushToTalkListeners();
+  setupAutoUpdates();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {

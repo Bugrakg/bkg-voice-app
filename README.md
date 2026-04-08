@@ -100,6 +100,78 @@ Bu komut sunlari baslatir:
 - renderer: `http://localhost:5173`
 - electron app
 
+## Windows Auto Update
+
+Bu proje Windows auto-update icin `electron-builder` + `electron-updater` + GitHub Releases kullanir.
+
+- installer hedefi: `NSIS`
+- update kontrolu: uygulama acilisindan kisa sure sonra
+- yeni surum varsa otomatik indirilir
+- indirme bitince kullaniciya yeniden baslatma sorulur
+
+### GH_TOKEN Nasil Set Edilir
+
+Token kod icine yazilmaz. `GH_TOKEN` environment variable olarak verilir.
+
+macOS / Linux:
+
+```bash
+export GH_TOKEN=your_github_token
+```
+
+Windows PowerShell:
+
+```powershell
+$env:GH_TOKEN="your_github_token"
+```
+
+Kalici yapmak icin Windows'ta System Environment Variables uzerinden eklemek daha dogrudur.
+
+### Version Nasil Artirilir
+
+Yeni release almadan once `package.json` icindeki `version` alanini arttirin.
+
+Ornek:
+
+```json
+"version": "0.1.1"
+```
+
+### Windows Release Nasil Alinir
+
+1. `GH_TOKEN` tanimli olsun
+2. Surumu arttirin
+3. Windows build alin:
+
+```bash
+npm run dist:win
+```
+
+Bu komut `dist-electron/` altinda installer ve update metadata dosyalarini uretir.
+
+### GitHub Release Nasil Alinir
+
+1. Yeni surum tag'i olusturun
+2. Windows build ciktilarini GitHub Release'e ekleyin
+3. Release'i publish edin
+
+Gerekli dosyalar tipik olarak:
+
+- `*.exe`
+- `latest.yml`
+- varsa blok map / ek updater dosyalari
+
+### Update Nasil Calisir
+
+1. Uygulama acilir
+2. Main process `autoUpdater.checkForUpdates()` cagirir
+3. Yeni surum varsa indirme baslar
+4. `download-progress` loglanir
+5. Indirme bitince dialog cikar:
+   - `Simdi guncelle`
+   - `Sonra`
+6. Kullanici `Simdi guncelle` derse uygulama yeniden baslayip update'i kurar
+
 ## Push-to-Talk
 
 Windows oncelikli global push-to-talk icin `uiohook-napi` kullanilir.

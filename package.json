@@ -19,6 +19,7 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
+    "electron-updater": "^6.6.2",
     "uiohook-napi": "^1.5.5"
   },
   "devDependencies": {
@@ -45,6 +46,11 @@
       "node_modules/node-gyp-build/**/*"
     ],
     "npmRebuild": true,
+    "publish": {
+      "provider": "github",
+      "owner": "Bugrakg",
+      "repo": "bkg-voice-app"
+    },
     "win": {
       "target": [
         "nsis"
