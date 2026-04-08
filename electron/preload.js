@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld("voiceApp", {
   platform: process.platform,
   debugPtt: process.env.DEBUG_PTT === "true",
   nodeEnv: process.env.NODE_ENV || "development",
-  appVersion: process.env.npm_package_version || require("../package.json").version,
+  appVersion: require("../package.json").version,
   serverUrl:
     process.env.SIGNALING_SERVER_URL ||
     (isDev ? "" : defaultProductionServerUrl),
@@ -37,5 +37,8 @@ contextBridge.exposeInMainWorld("voiceApp", {
   },
   openMicrophonePrivacySettings() {
     return ipcRenderer.invoke("open-microphone-privacy-settings");
+  },
+  getAppVersion() {
+    return ipcRenderer.invoke("get-app-version");
   }
 });

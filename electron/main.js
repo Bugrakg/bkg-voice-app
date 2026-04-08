@@ -303,6 +303,10 @@ ipcMain.handle("open-microphone-privacy-settings", () => {
   return openMicrophonePrivacySettings();
 });
 
+ipcMain.handle("get-app-version", () => {
+  return app.getVersion();
+});
+
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();

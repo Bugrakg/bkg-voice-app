@@ -68,7 +68,7 @@ export function VoiceSidebar({
   onToggleRemoteUserMute
 }: VoiceSidebarProps) {
   const logoSrc = `${import.meta.env.BASE_URL}logo.png`;
-  const appVersion = window.voiceApp?.appVersion || "0.0.0";
+  const [appVersion, setAppVersion] = useState(window.voiceApp?.appVersion || "0.0.0");
   const [contextMenu, setContextMenu] = useState<{
     userId: string;
     tag: string;
@@ -84,6 +84,14 @@ export function VoiceSidebar({
       window.removeEventListener("click", closeMenu);
       window.removeEventListener("scroll", closeMenu);
     };
+  }, []);
+
+  useEffect(() => {
+    void window.voiceApp?.getAppVersion?.().then((version) => {
+      if (version) {
+        setAppVersion(version);
+      }
+    });
   }, []);
 
   return (

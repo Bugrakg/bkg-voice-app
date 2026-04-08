@@ -44,6 +44,7 @@ declare global {
         shortcut: string;
       }>;
       openMicrophonePrivacySettings?: () => Promise<boolean>;
+      getAppVersion?: () => Promise<string>;
       versions: {
         chrome: string;
         electron: string;

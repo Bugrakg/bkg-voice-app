@@ -359,23 +359,6 @@ export function useVoiceRoom() {
     setInputDevices(nextInputDevices);
     setOutputDevices(nextOutputDevices);
 
-    if (
-      selectedInputDeviceIdRef.current &&
-      !hasDevice(devices, "audioinput", selectedInputDeviceIdRef.current)
-    ) {
-      selectedInputDeviceIdRef.current = "";
-      setSelectedInputDeviceId("");
-      window.localStorage.removeItem(STORAGE_KEYS.inputDeviceId);
-    }
-
-    if (
-      selectedOutputDeviceIdRef.current &&
-      !hasDevice(devices, "audiooutput", selectedOutputDeviceIdRef.current)
-    ) {
-      selectedOutputDeviceIdRef.current = "";
-      setSelectedOutputDeviceId("");
-      window.localStorage.removeItem(STORAGE_KEYS.outputDeviceId);
-    }
   }
 
   function getRemoteVolumeStorageKey(userId: string) {
