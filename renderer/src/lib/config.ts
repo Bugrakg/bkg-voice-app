@@ -1,4 +1,4 @@
-function readRendererEnv(name) {
+function readRendererEnv(name: string) {
   const env = import.meta.env as Record<string, string | undefined>;
   return typeof env[name] === "string" ? env[name] : "";
 }

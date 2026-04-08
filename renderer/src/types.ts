@@ -30,10 +30,6 @@ export type RoomPresenceEvent = {
 export type VoiceMode = "open-mic" | "push-to-talk";
 
 declare global {
-  interface HTMLMediaElement {
-    setSinkId?: (sinkId: string) => Promise<void>;
-  }
-
   interface Window {
     voiceApp?: {
       debugPtt: boolean;
