@@ -1,4 +1,4 @@
-const { contextBridge } = require("electron");
+const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("voiceApp", {
   versions: {
@@ -7,5 +7,16 @@ contextBridge.exposeInMainWorld("voiceApp", {
     node: process.versions.node
   },
   platform: process.platform,
-  nodeEnv: process.env.NODE_ENV || "development"
+  nodeEnv: process.env.NODE_ENV || "development",
+  onPushToTalkStateChange(callback) {
+    const listener = (_event, pressed) => callback(Boolean(pressed));
+    ipcRenderer.on("push-to-talk-state", listener);
+
+    return () => {
+      ipcRenderer.removeListener("push-to-talk-state", listener);
+    };
+  },
+  setPushToTalkShortcut(shortcut) {
+    return ipcRenderer.invoke("set-push-to-talk-shortcut", shortcut);
+  }
 });

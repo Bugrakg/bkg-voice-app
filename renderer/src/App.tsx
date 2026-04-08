@@ -16,6 +16,8 @@ export default function App() {
     isLocallySpeaking,
     isMicEnabled,
     isOutputEnabled,
+    pushToTalkKey,
+    voiceMode,
     joinRoom,
     leaveRoom,
     outputDevices,
@@ -34,7 +36,9 @@ export default function App() {
     changeInputDevice,
     changeOutputDevice,
     setRemoteUserVolume,
-    toggleRemoteUserMute
+    toggleRemoteUserMute,
+    changeVoiceMode,
+    changePushToTalkKey
   } = useVoiceRoom();
 
   const [loginTag, setLoginTag] = useState(tag);
@@ -159,12 +163,16 @@ export default function App() {
           outputDevices={outputDevices}
           supportsOutputRouting={supportsOutputRouting}
           isLocallySpeaking={isLocallySpeaking}
+          pushToTalkKey={pushToTalkKey}
+          voiceMode={voiceMode}
           onEditableTagChange={setEditableTag}
           onClose={() => setIsSettingsOpen(false)}
           onSaveTag={() => updateTag(editableTag)}
           onChangeInput={changeInputDevice}
           onChangeOutput={changeOutputDevice}
           onTestOutput={playOutputTest}
+          onChangeVoiceMode={changeVoiceMode}
+          onChangePushToTalkKey={changePushToTalkKey}
         />
       ) : null}
     </main>

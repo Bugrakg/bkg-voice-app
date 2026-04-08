@@ -18,9 +18,10 @@ export function LoginScreen({
       <section className="auth-card">
         <div className="auth-hero">
           <div className="brand-mark brand-mark--hero" aria-hidden="true">
-            <div className="brand-mark__glyph">B</div>
+            <img src="/logo.png" alt="" className="brand-mark__image" />
           </div>
         </div>
+        <p className="auth-brand-name">BKG Voice App</p>
         <h1>Gardaslarim icin sesli oda hayrati</h1>
         <p className="muted">
           Ilk surum sadece tag ve ses odakli. Kayit, mesajlasma ve ekstra paneller yok.

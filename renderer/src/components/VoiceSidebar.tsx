@@ -79,7 +79,7 @@ export function VoiceSidebar({
       <div className="panel-heading">
         <div className="sidebar-brand">
           <div className="brand-mark brand-mark--sidebar" aria-hidden="true">
-            <div className="brand-mark__glyph">B</div>
+            <img src="/logo.png" alt="" className="brand-mark__image" />
           </div>
           <div className="sidebar-brand__text">
             <strong>BKG Voice App</strong>
@@ -91,8 +91,16 @@ export function VoiceSidebar({
 
       <div className="room-list">
         {ROOMS.map((room) => {
-          const displayedUsers =
-            currentRoomId === room ? connectedUsers : roomMembers[room] || [];
+          const displayedUsers = (currentRoomId === room ? connectedUsers : roomMembers[room] || [])
+            .map((user) =>
+              user.id === socketId
+                ? {
+                    ...user,
+                    micEnabled: isMicEnabled,
+                    audioOutputEnabled: isOutputEnabled
+                  }
+                : user
+            );
 
           return (
             <section

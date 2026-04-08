@@ -27,6 +27,8 @@ export type RoomPresenceEvent = {
   reason?: "leave" | "disconnect" | "switch";
 };
 
+export type VoiceMode = "open-mic" | "push-to-talk";
+
 declare global {
   interface HTMLMediaElement {
     setSinkId?: (sinkId: string) => Promise<void>;
@@ -36,6 +38,11 @@ declare global {
     voiceApp?: {
       platform: string;
       nodeEnv: string;
+      onPushToTalkStateChange?: (callback: (pressed: boolean) => void) => () => void;
+      setPushToTalkShortcut?: (shortcut: string) => Promise<{
+        ok: boolean;
+        shortcut: string;
+      }>;
       versions: {
         chrome: string;
         electron: string;

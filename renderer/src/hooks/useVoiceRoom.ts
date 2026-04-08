@@ -8,7 +8,8 @@ import type {
   RoomCounts,
   RoomMembers,
   RoomPresenceEvent,
-  RoomUser
+  RoomUser,
+  VoiceMode
 } from "../types";
 
 type PeerMap = Map<string, RTCPeerConnection>;
@@ -34,6 +35,51 @@ function getStoredValue(key: string) {
 
 function readLabel(device: MediaDeviceInfo, fallback: string) {
   return device.label || `${fallback} ${device.deviceId.slice(0, 4)}`;
+}
+
+function keyboardEventToShortcut(event: KeyboardEvent) {
+  const shortcutMap = {
+    Space: "Space",
+    Backquote: "`",
+    Minus: "-",
+    Equal: "=",
+    BracketLeft: "[",
+    BracketRight: "]",
+    Backslash: "\\",
+    Semicolon: ";",
+    Quote: "'",
+    Comma: ",",
+    Period: ".",
+    Slash: "/"
+  };
+
+  if (event.code.startsWith("Key")) {
+    return event.code.replace("Key", "");
+  }
+
+  if (event.code.startsWith("Digit")) {
+    return event.code.replace("Digit", "");
+  }
+
+  if (event.code.startsWith("F")) {
+    return event.code;
+  }
+
+  return shortcutMap[event.code as keyof typeof shortcutMap] || "";
+}
+
+function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  const tagName = target.tagName.toLowerCase();
+  return (
+    target.isContentEditable ||
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select"
+  );
 }
 
 export function useVoiceRoom() {
@@ -62,6 +108,14 @@ export function useVoiceRoom() {
   const [isJoining, setIsJoining] = useState(false);
   const [supportsOutputRouting, setSupportsOutputRouting] = useState(false);
   const [isLocallySpeaking, setIsLocallySpeaking] = useState(false);
+  const [voiceMode, setVoiceModeState] = useState<VoiceMode>(() => {
+    const storedVoiceMode = getStoredValue(STORAGE_KEYS.voiceMode);
+    return storedVoiceMode === "push-to-talk" ? "push-to-talk" : "open-mic";
+  });
+  const [pushToTalkKey, setPushToTalkKeyState] = useState(
+    () => getStoredValue(STORAGE_KEYS.pushToTalkKey) || "F8"
+  );
+  const [isPushToTalkActive, setIsPushToTalkActive] = useState(false);
   const [error, setError] = useState("");
 
   const socketRef = useRef<Socket | null>(null);
@@ -77,6 +131,8 @@ export function useVoiceRoom() {
   const micEnabledRef = useRef(isMicEnabled);
   const selectedInputDeviceIdRef = useRef(selectedInputDeviceId);
   const remoteUserVolumesRef = useRef<Record<string, number>>({});
+  const voiceModeRef = useRef<VoiceMode>(voiceMode);
+  const pushToTalkActiveRef = useRef(isPushToTalkActive);
   const speakingMonitorRef = useRef<Awaited<
     ReturnType<typeof createSpeakingMonitor>
   > | null>(null);
@@ -131,10 +187,119 @@ export function useVoiceRoom() {
     remoteUserVolumesRef.current = remoteUserVolumes;
   }, [remoteUserVolumes]);
 
+  useEffect(() => {
+    voiceModeRef.current = voiceMode;
+  }, [voiceMode]);
+
+  useEffect(() => {
+    pushToTalkActiveRef.current = isPushToTalkActive;
+  }, [isPushToTalkActive]);
+
+  useEffect(() => {
+    void window.voiceApp?.setPushToTalkShortcut?.(pushToTalkKey);
+  }, [pushToTalkKey]);
+
+  useEffect(() => {
+    const unsubscribe = window.voiceApp?.onPushToTalkStateChange?.((pressed) => {
+      setIsPushToTalkActive(pressed);
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        voiceModeRef.current !== "push-to-talk" ||
+        event.defaultPrevented ||
+        isEditableTarget(event.target)
+      ) {
+        return;
+      }
+
+      if (keyboardEventToShortcut(event) !== pushToTalkKey) {
+        return;
+      }
+
+      setIsPushToTalkActive(true);
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (voiceModeRef.current !== "push-to-talk") {
+        return;
+      }
+
+      if (keyboardEventToShortcut(event) !== pushToTalkKey) {
+        return;
+      }
+
+      setIsPushToTalkActive(false);
+    };
+
+    const resetPushToTalkState = () => {
+      setIsPushToTalkActive(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", resetPushToTalkState);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", resetPushToTalkState);
+    };
+  }, [pushToTalkKey]);
+
   const connectedUsers = useMemo(
     () => roomUsers.filter((user) => user.roomId === currentRoomId),
     [currentRoomId, roomUsers]
   );
+
+  function shouldTransmitMic() {
+    if (!isMicEnabled) {
+      return false;
+    }
+
+    if (voiceModeRef.current === "push-to-talk") {
+      return pushToTalkActiveRef.current;
+    }
+
+    return true;
+  }
+
+  function applyMicTransmissionState() {
+    const track = localStreamRef.current?.getAudioTracks()[0];
+    if (track) {
+      track.enabled = shouldTransmitMic();
+    }
+  }
+
+  function patchSelfStateLocally(nextState: Partial<RoomUser>) {
+    const currentSocketId = socketIdRef.current;
+    if (!currentSocketId) {
+      return;
+    }
+
+    setRoomUsers((currentUsers) =>
+      currentUsers.map((user) =>
+        user.id === currentSocketId ? { ...user, ...nextState } : user
+      )
+    );
+
+    setRoomMembers((currentMembers) =>
+      Object.fromEntries(
+        Object.entries(currentMembers).map(([roomId, members]) => [
+          roomId,
+          members.map((user) =>
+            user.id === currentSocketId ? { ...user, ...nextState } : user
+          )
+        ])
+      ) as RoomMembers
+    );
+  }
 
   async function refreshDevices() {
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -171,12 +336,26 @@ export function useVoiceRoom() {
     }
 
     const storedValue = window.localStorage.getItem(getRemoteVolumeStorageKey(userId));
-    const parsedValue = Number(storedValue);
-    if (Number.isFinite(parsedValue)) {
-      return Math.max(0, Math.min(1, parsedValue));
+    if (storedValue !== null) {
+      const parsedValue = Number(storedValue);
+      if (Number.isFinite(parsedValue)) {
+        return Math.max(0, Math.min(1, parsedValue));
+      }
     }
 
     return 1;
+  }
+
+  function getRemoteUserVolumeBackup(userId: string) {
+    const storedValue = window.localStorage.getItem(getRemoteVolumeBackupStorageKey(userId));
+    if (storedValue !== null) {
+      const parsedValue = Number(storedValue);
+      if (Number.isFinite(parsedValue)) {
+        return Math.max(0, Math.min(1, parsedValue));
+      }
+    }
+
+    return null;
   }
 
   function getSocket() {
@@ -302,7 +481,7 @@ export function useVoiceRoom() {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     const [track] = stream.getAudioTracks();
     if (track) {
-      track.enabled = micEnabledRef.current;
+      track.enabled = shouldTransmitMic();
     }
 
     localStreamRef.current = stream;
@@ -322,6 +501,10 @@ export function useVoiceRoom() {
       }
     });
   }
+
+  useEffect(() => {
+    applyMicTransmissionState();
+  }, [isMicEnabled, voiceMode, isPushToTalkActive]);
 
   async function playNotificationTone(type: "join" | "leave") {
     const AudioContextClass =
@@ -504,11 +687,8 @@ export function useVoiceRoom() {
     const currentVolume = getRemoteUserVolume(userId);
 
     if (currentVolume <= 0.001) {
-      const storedBackup = Number(
-        window.localStorage.getItem(getRemoteVolumeBackupStorageKey(userId))
-      );
-      const nextVolume =
-        Number.isFinite(storedBackup) && storedBackup > 0 ? storedBackup : 1;
+      const storedBackup = getRemoteUserVolumeBackup(userId);
+      const nextVolume = storedBackup && storedBackup > 0 ? storedBackup : 1;
       await setRemoteUserVolume(userId, nextVolume);
       return;
     }
@@ -647,19 +827,19 @@ export function useVoiceRoom() {
 
   async function toggleMic() {
     const nextValue = !isMicEnabled;
+    micEnabledRef.current = nextValue;
     setIsMicEnabled(nextValue);
-
-    const track = localStreamRef.current?.getAudioTracks()[0];
-    if (track) {
-      track.enabled = nextValue;
-    }
-
+    applyMicTransmissionState();
+    patchSelfStateLocally({ micEnabled: nextValue });
     socketRef.current?.emit("mic-state", nextValue);
   }
 
   async function toggleOutput() {
     const nextValue = !isOutputEnabled;
+    outputEnabledRef.current = nextValue;
     setIsOutputEnabled(nextValue);
+    await applyOutputPreferences();
+    patchSelfStateLocally({ audioOutputEnabled: nextValue });
     socketRef.current?.emit("audio-output-state", nextValue);
   }
 
@@ -675,6 +855,21 @@ export function useVoiceRoom() {
   async function changeOutputDevice(deviceId: string) {
     setSelectedOutputDeviceId(deviceId);
     window.localStorage.setItem(STORAGE_KEYS.outputDeviceId, deviceId);
+  }
+
+  function changeVoiceMode(nextVoiceMode: VoiceMode) {
+    setVoiceModeState(nextVoiceMode);
+    window.localStorage.setItem(STORAGE_KEYS.voiceMode, nextVoiceMode);
+
+    if (nextVoiceMode === "open-mic") {
+      setIsPushToTalkActive(false);
+    }
+  }
+
+  function changePushToTalkKey(nextKey: string) {
+    setPushToTalkKeyState(nextKey);
+    window.localStorage.setItem(STORAGE_KEYS.pushToTalkKey, nextKey);
+    setIsPushToTalkActive(false);
   }
 
   useEffect(() => {
@@ -701,6 +896,8 @@ export function useVoiceRoom() {
     isLocallySpeaking,
     isMicEnabled,
     isOutputEnabled,
+    pushToTalkKey,
+    voiceMode,
     joinRoom,
     leaveRoom,
     outputDevices,
@@ -720,6 +917,8 @@ export function useVoiceRoom() {
     changeInputDevice,
     changeOutputDevice,
     setRemoteUserVolume,
-    toggleRemoteUserMute
+    toggleRemoteUserMute,
+    changeVoiceMode,
+    changePushToTalkKey
   };
 }

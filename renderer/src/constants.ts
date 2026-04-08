@@ -4,7 +4,9 @@ export const STORAGE_KEYS = {
   inputDeviceId: "voice-app-input-device-id",
   outputDeviceId: "voice-app-output-device-id",
   remoteVolumePrefix: "voice-app-remote-volume",
-  remoteVolumeBackupPrefix: "voice-app-remote-volume-backup"
+  remoteVolumeBackupPrefix: "voice-app-remote-volume-backup",
+  voiceMode: "voice-app-voice-mode",
+  pushToTalkKey: "voice-app-push-to-talk-key"
 } as const;
 
 export const RTC_CONFIG: RTCConfiguration = {

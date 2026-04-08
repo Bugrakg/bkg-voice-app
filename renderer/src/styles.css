@@ -58,6 +58,22 @@ button {
   margin-bottom: 18px;
 }
 
+.auth-brand-name {
+  margin: 0 0 10px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #ffd166;
+  text-shadow:
+    0 0 18px rgba(255, 209, 102, 0.2),
+    0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+.auth-card h1 {
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
 .brand-mark {
   display: inline-flex;
   align-items: center;
@@ -81,18 +97,29 @@ button {
   letter-spacing: 0.08em;
 }
 
+.brand-mark__image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
 .brand-mark--hero {
-  width: 132px;
-  height: 132px;
+  width: 168px;
+  height: 168px;
   margin: 0 auto;
-  border-radius: 28px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
 }
 
 .brand-mark--sidebar {
   width: 42px;
   height: 42px;
   flex: 0 0 auto;
-  border-radius: 14px;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
 }
 
 .auth-card h1,
@@ -564,6 +591,83 @@ select {
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.settings-note {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.voice-mode-options {
+  display: grid;
+  gap: 10px;
+}
+
+.voice-mode-card {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  color: inherit;
+  text-align: left;
+}
+
+.voice-mode-card--active {
+  border-color: rgba(126, 231, 135, 0.4);
+  background: rgba(126, 231, 135, 0.08);
+}
+
+.voice-mode-card__radio {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  flex: 0 0 auto;
+}
+
+.voice-mode-card--active .voice-mode-card__radio {
+  border-color: #7ee787;
+  box-shadow: inset 0 0 0 4px #7ee787;
+}
+
+.voice-mode-card__content {
+  display: grid;
+  gap: 4px;
+}
+
+.voice-mode-card__content strong {
+  font-size: 0.96rem;
+}
+
+.voice-mode-card__content small {
+  color: #9ca3af;
+}
+
+.push-to-talk-picker {
+  display: grid;
+  gap: 8px;
+}
+
+.push-to-talk-picker span {
+  font-weight: 600;
+}
+
+.push-to-talk-button {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: #11151b;
+  color: #f8fafc;
+  padding: 12px 14px;
+}
+
+.push-to-talk-button--listening {
+  border-color: rgba(126, 231, 135, 0.5);
+  color: #7ee787;
 }
 
 .settings-field > span,

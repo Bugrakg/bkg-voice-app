@@ -1,7 +1,10 @@
 const path = require("path");
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, globalShortcut, ipcMain } = require("electron");
 
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
+let mainWindow = null;
+let isPushToTalkPressed = false;
+let pushToTalkShortcut = "F8";
 
 function createMainWindow() {
   const window = new BrowserWindow({
@@ -14,9 +17,12 @@ function createMainWindow() {
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      backgroundThrottling: false
     }
   });
+
+  mainWindow = window;
 
   if (isDev) {
     window.loadURL(process.env.ELECTRON_RENDERER_URL);
@@ -26,8 +32,31 @@ function createMainWindow() {
   window.loadFile(path.join(__dirname, "..", "renderer", "dist", "index.html"));
 }
 
+function sendPushToTalkState(pressed) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.webContents.send("push-to-talk-state", pressed);
+}
+
+function registerPushToTalkShortcut(shortcut = pushToTalkShortcut) {
+  globalShortcut.unregisterAll();
+  const registered = globalShortcut.register(shortcut, () => {
+    isPushToTalkPressed = !isPushToTalkPressed;
+    sendPushToTalkState(isPushToTalkPressed);
+  });
+
+  if (registered) {
+    pushToTalkShortcut = shortcut;
+  }
+
+  return registered;
+}
+
 app.whenReady().then(() => {
   createMainWindow();
+  registerPushToTalkShortcut();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -36,8 +65,22 @@ app.whenReady().then(() => {
   });
 });
 
+ipcMain.handle("set-push-to-talk-shortcut", (_event, shortcut) => {
+  isPushToTalkPressed = false;
+  sendPushToTalkState(false);
+  const registered = registerPushToTalkShortcut(String(shortcut || "F8"));
+  return {
+    ok: registered,
+    shortcut: pushToTalkShortcut
+  };
+});
+
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
     app.quit();
   }
+});
+
+app.on("will-quit", () => {
+  globalShortcut.unregisterAll();
 });
