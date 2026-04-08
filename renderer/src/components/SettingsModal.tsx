@@ -59,13 +59,13 @@ export function SettingsModal({
 
         <div className="settings-grid">
           <label className="settings-field">
-            <span>Tag</span>
+            <span>Kullanici Adi</span>
             <div className="settings-inline">
               <input
                 maxLength={24}
                 value={editableTag}
                 onChange={(event) => onEditableTagChange(event.target.value)}
-                placeholder="Tag guncelle"
+                placeholder="Kullanici adini guncelle"
               />
               <button type="button" className="control-button" onClick={() => void onSaveTag()}>
                 Kaydet

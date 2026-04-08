@@ -15,6 +15,7 @@ export type DeviceOption = {
 };
 
 export type RoomCounts = Record<string, number>;
+export type RoomMembers = Record<string, RoomUser[]>;
 
 export type RoomPresenceEvent = {
   user: {

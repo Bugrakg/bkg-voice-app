@@ -111,8 +111,19 @@ function getRoomCounts() {
   }, {});
 }
 
+function getRoomMembers() {
+  return ROOM_IDS.reduce((rooms, roomId) => {
+    rooms[roomId] = getRoomUsers(roomId);
+    return rooms;
+  }, {});
+}
+
 function emitRoomCounts() {
   io.emit("room-counts", getRoomCounts());
+}
+
+function emitRoomMembers() {
+  io.emit("room-members", getRoomMembers());
 }
 
 function emitUserList(roomId) {
@@ -148,6 +159,7 @@ function leaveRoom(socket, reason = "leave") {
   user.speaking = false;
   emitUserList(oldRoomId);
   emitRoomCounts();
+  emitRoomMembers();
   return oldRoomId;
 }
 
@@ -167,6 +179,7 @@ io.on("connection", (socket) => {
   console.log(`[socket] connected ${socket.id}`);
   users.set(socket.id, createDefaultUser(socket.id));
   socket.emit("room-counts", getRoomCounts());
+  socket.emit("room-members", getRoomMembers());
 
   socket.on("set-tag", (tag) => {
     const user = users.get(socket.id);
@@ -176,6 +189,7 @@ io.on("connection", (socket) => {
 
     user.tag = String(tag || "").trim().slice(0, 24) || user.tag;
     emitUserList(user.roomId);
+    emitRoomMembers();
   });
 
   socket.on("join-room", (roomId) => {
@@ -205,6 +219,7 @@ io.on("connection", (socket) => {
     });
     emitUserList(roomId);
     emitRoomCounts();
+    emitRoomMembers();
   });
 
   socket.on("leave-room", () => {
@@ -273,6 +288,7 @@ io.on("connection", (socket) => {
       emitUserList(roomId);
     }
     emitRoomCounts();
+    emitRoomMembers();
   });
 });
 

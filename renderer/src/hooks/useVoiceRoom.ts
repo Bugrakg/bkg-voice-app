@@ -6,6 +6,7 @@ import { getSignalingServerUrl } from "../lib/config";
 import type {
   DeviceOption,
   RoomCounts,
+  RoomMembers,
   RoomPresenceEvent,
   RoomUser
 } from "../types";
@@ -17,6 +18,13 @@ function createInitialRoomCounts() {
   return ROOMS.reduce<RoomCounts>((counts, roomId) => {
     counts[roomId] = 0;
     return counts;
+  }, {});
+}
+
+function createInitialRoomMembers() {
+  return ROOMS.reduce<RoomMembers>((rooms, roomId) => {
+    rooms[roomId] = [];
+    return rooms;
   }, {});
 }
 
@@ -34,6 +42,9 @@ export function useVoiceRoom() {
   const [roomUsers, setRoomUsers] = useState<RoomUser[]>([]);
   const [roomCounts, setRoomCounts] = useState<RoomCounts>(() =>
     createInitialRoomCounts()
+  );
+  const [roomMembers, setRoomMembers] = useState<RoomMembers>(() =>
+    createInitialRoomMembers()
   );
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   const [socketId, setSocketId] = useState("");
@@ -162,12 +173,20 @@ export function useVoiceRoom() {
       setSocketId("");
       setRoomUsers([]);
       setRoomCounts(createInitialRoomCounts());
+      setRoomMembers(createInitialRoomMembers());
     });
 
     socket.on("room-counts", (counts: RoomCounts) => {
       setRoomCounts((currentCounts) => ({
         ...currentCounts,
         ...counts
+      }));
+    });
+
+    socket.on("room-members", (members: RoomMembers) => {
+      setRoomMembers((currentMembers) => ({
+        ...currentMembers,
+        ...members
       }));
     });
 
@@ -509,7 +528,7 @@ export function useVoiceRoom() {
   async function enterApp(nextTag: string) {
     const trimmedTag = nextTag.trim().slice(0, 24);
     if (!trimmedTag) {
-      setError("Tag bos olamaz.");
+      setError("Kullanici adi bos olamaz.");
       return;
     }
 
@@ -618,6 +637,7 @@ export function useVoiceRoom() {
     leaveRoom,
     outputDevices,
     roomCounts,
+    roomMembers,
     roomUsers,
     selectedInputDeviceId,
     selectedOutputDeviceId,

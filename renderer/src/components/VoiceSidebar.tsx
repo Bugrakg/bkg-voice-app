@@ -1,4 +1,4 @@
-import type { RoomCounts, RoomUser } from "../types";
+import type { RoomCounts, RoomMembers, RoomUser } from "../types";
 import { IconButton } from "./IconButton";
 import {
   ExitIcon,
@@ -16,6 +16,7 @@ type VoiceSidebarProps = {
   currentRoomId: string | null;
   connectedUsers: RoomUser[];
   roomCounts: RoomCounts;
+  roomMembers: RoomMembers;
   socketId: string;
   isJoining: boolean;
   tag: string;
@@ -35,6 +36,7 @@ export function VoiceSidebar({
   currentRoomId,
   connectedUsers,
   roomCounts,
+  roomMembers,
   socketId,
   isJoining,
   tag,
@@ -51,9 +53,16 @@ export function VoiceSidebar({
   return (
     <section className="sidebar sidebar--full">
       <div className="panel-heading">
-        <p className="eyebrow">Odalar</p>
-        <h2>Tek sunucu</h2>
-        <p className="muted sidebar-summary">{roomSummary}</p>
+        <div className="sidebar-brand">
+          <div className="brand-mark brand-mark--sidebar" aria-hidden="true">
+            <div className="brand-mark__glyph">B</div>
+          </div>
+          <div className="sidebar-brand__text">
+            <strong>BKG Voice App</strong>
+            <p className="eyebrow">Odalar</p>
+          </div>
+        </div>
+        {roomSummary ? <p className="muted sidebar-summary">{roomSummary}</p> : null}
       </div>
 
       <div className="room-list">
@@ -73,8 +82,8 @@ export function VoiceSidebar({
             </button>
 
             <div className="room-members">
-              {currentRoomId === room && connectedUsers.length > 0 ? (
-                connectedUsers.map((user) => (
+              {(roomMembers[room] || []).length > 0 ? (
+                (roomMembers[room] || []).map((user) => (
                   <UserRow key={user.id} user={user} isSelf={user.id === socketId} />
                 ))
               ) : (

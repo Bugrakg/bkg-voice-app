@@ -24,7 +24,7 @@
   },
   "build": {
     "appId": "com.bugrakg.minimalvoiceroom",
-    "productName": "Minimal Voice Room",
+    "productName": "BKG Voice App",
     "directories": {
       "buildResources": "build",
       "output": "dist-electron"

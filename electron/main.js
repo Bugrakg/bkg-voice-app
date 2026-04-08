@@ -10,7 +10,7 @@ function createMainWindow() {
     minWidth: 360,
     minHeight: 520,
     backgroundColor: "#111317",
-    title: "Minimal Voice Room",
+    title: "BKG Voice App",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -20,7 +20,6 @@ function createMainWindow() {
 
   if (isDev) {
     window.loadURL(process.env.ELECTRON_RENDERER_URL);
-    window.webContents.openDevTools({ mode: "detach" });
     return;
   }
 

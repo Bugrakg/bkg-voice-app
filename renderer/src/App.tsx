@@ -20,6 +20,7 @@ export default function App() {
     leaveRoom,
     outputDevices,
     roomCounts,
+    roomMembers,
     selectedInputDeviceId,
     selectedOutputDeviceId,
     setTagState,
@@ -39,7 +40,7 @@ export default function App() {
   const outputTestAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const roomSummary = useMemo(
-    () => (currentRoomId ? `${connectedUsers.length} kisi bagli` : "Oda secilmedi"),
+    () => (currentRoomId ? `${connectedUsers.length} kisi bagli` : ""),
     [connectedUsers.length, currentRoomId]
   );
 
@@ -112,7 +113,6 @@ export default function App() {
       <LoginScreen
         loginTag={loginTag}
         error={error}
-        serverUrl={window.voiceApp?.serverUrl || "http://localhost:3001"}
         onTagChange={(value) => {
           setLoginTag(value);
           setTagState(value);
@@ -129,6 +129,7 @@ export default function App() {
         currentRoomId={currentRoomId}
         connectedUsers={connectedUsers}
         roomCounts={roomCounts}
+        roomMembers={roomMembers}
         socketId={socketId}
         isJoining={isJoining}
         tag={tag}
