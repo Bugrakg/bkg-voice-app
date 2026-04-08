@@ -68,7 +68,7 @@ export function VoiceSidebar({
   onToggleRemoteUserMute
 }: VoiceSidebarProps) {
   const logoSrc = `${import.meta.env.BASE_URL}logo.png`;
-  const [appVersion, setAppVersion] = useState(window.voiceApp?.appVersion || "0.0.0");
+  const [appVersion, setAppVersion] = useState(window.voiceApp?.appVersion || "");
   const [contextMenu, setContextMenu] = useState<{
     userId: string;
     tag: string;
@@ -233,7 +233,7 @@ export function VoiceSidebar({
         </p>
       ) : null}
 
-      <p className="app-version">v{appVersion}</p>
+      <p className="app-version">{appVersion ? `v${appVersion}` : ""}</p>
 
       {contextMenu ? (
         <div

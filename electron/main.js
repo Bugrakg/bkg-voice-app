@@ -1,6 +1,7 @@
 const path = require("path");
 const { app, BrowserWindow, dialog, ipcMain, Menu, shell } = require("electron");
 const { autoUpdater } = require("electron-updater");
+const packageJson = require("../package.json");
 
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
 const debugPtt = process.env.DEBUG_PTT === "true";
@@ -304,7 +305,7 @@ ipcMain.handle("open-microphone-privacy-settings", () => {
 });
 
 ipcMain.handle("get-app-version", () => {
-  return app.getVersion();
+  return packageJson.version || app.getVersion();
 });
 
 app.on("window-all-closed", () => {

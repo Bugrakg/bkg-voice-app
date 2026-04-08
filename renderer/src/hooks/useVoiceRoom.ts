@@ -62,6 +62,32 @@ function isEditableTarget(target: EventTarget | null) {
   );
 }
 
+function normalizeKeyboardShortcut(shortcut: string) {
+  return shortcut.trim().toUpperCase();
+}
+
+function keyboardEventMatchesShortcut(event: KeyboardEvent, shortcut: string) {
+  const normalizedShortcut = normalizeKeyboardShortcut(shortcut);
+
+  if (/^[A-Z]$/.test(normalizedShortcut)) {
+    return event.code === `Key${normalizedShortcut}`;
+  }
+
+  if (/^[0-9]$/.test(normalizedShortcut)) {
+    return event.code === `Digit${normalizedShortcut}`;
+  }
+
+  if (/^F([1-9]|1[0-2])$/.test(normalizedShortcut)) {
+    return event.code === normalizedShortcut;
+  }
+
+  if (normalizedShortcut === "SPACE") {
+    return event.code === "Space";
+  }
+
+  return event.key.toUpperCase() === normalizedShortcut;
+}
+
 function logPtt(message: string, extra?: unknown) {
   if (!window.voiceApp?.debugPtt) {
     return;
@@ -294,6 +320,45 @@ export function useVoiceRoom() {
     return () => {
       unsubscribeDown?.();
       unsubscribeUp?.();
+    };
+  }, [pushToTalkKey]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (
+        voiceModeRef.current !== "push-to-talk" ||
+        isEditableTarget(event.target) ||
+        !keyboardEventMatchesShortcut(event, pushToTalkKey)
+      ) {
+        return;
+      }
+
+      setIsPushToTalkActive(true);
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (
+        voiceModeRef.current !== "push-to-talk" ||
+        !keyboardEventMatchesShortcut(event, pushToTalkKey)
+      ) {
+        return;
+      }
+
+      setIsPushToTalkActive(false);
+    };
+
+    const handleWindowBlur = () => {
+      setIsPushToTalkActive(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleWindowBlur);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleWindowBlur);
     };
   }, [pushToTalkKey]);
 

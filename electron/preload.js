@@ -1,4 +1,5 @@
 const { contextBridge, ipcRenderer } = require("electron");
+const packageJson = require("../package.json");
 
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
 const defaultProductionServerUrl = "https://bkg-voice-app.onrender.com";
@@ -12,7 +13,7 @@ contextBridge.exposeInMainWorld("voiceApp", {
   platform: process.platform,
   debugPtt: process.env.DEBUG_PTT === "true",
   nodeEnv: process.env.NODE_ENV || "development",
-  appVersion: require("../package.json").version,
+  appVersion: packageJson.version,
   serverUrl:
     process.env.SIGNALING_SERVER_URL ||
     (isDev ? "" : defaultProductionServerUrl),
