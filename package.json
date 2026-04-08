@@ -30,7 +30,7 @@
     "wait-on": "^8.0.3"
   },
   "build": {
-    "appId": "com.bugrakg.minimalvoiceroom",
+    "appId": "com.bugrakg.bkgvoiceapp",
     "productName": "BKG Voice App",
     "directories": {
       "buildResources": "build",
