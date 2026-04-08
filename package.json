@@ -1,0 +1,47 @@
+{
+  "name": "minimal-voice-room",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal Electron voice room MVP for small friend groups.",
+  "main": "electron/main.js",
+  "workspaces": [
+    "renderer",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev --prefix server\" \"npm run dev --prefix renderer\" \"npm run dev:electron\"",
+    "dev:electron": "wait-on tcp:3001 http://localhost:5173 && cross-env NODE_ENV=development ELECTRON_RENDERER_URL=http://localhost:5173 electron .",
+    "build": "npm run build --prefix renderer",
+    "dist:win": "npm run build && electron-builder --win nsis",
+    "dist:dir": "npm run build && electron-builder --dir"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^35.1.4",
+    "electron-builder": "^26.0.12",
+    "wait-on": "^8.0.3"
+  },
+  "build": {
+    "appId": "com.bugrakg.minimalvoiceroom",
+    "productName": "Minimal Voice Room",
+    "directories": {
+      "buildResources": "build",
+      "output": "dist-electron"
+    },
+    "files": [
+      "electron/**/*",
+      "renderer/dist/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
