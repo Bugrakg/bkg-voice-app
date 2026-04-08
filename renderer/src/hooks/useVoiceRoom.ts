@@ -425,7 +425,10 @@ export function useVoiceRoom() {
     addDiagnosticLog(`Socket baglantisi baslatildi: ${signalingUrl}`);
 
     const socket = io(signalingUrl, {
-      transports: ["websocket", "polling"]
+      transports: ["polling", "websocket"],
+      upgrade: true,
+      rememberUpgrade: false,
+      timeout: 10000
     });
 
     socket.on("connect", () => {
