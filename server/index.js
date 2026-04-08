@@ -25,6 +25,7 @@ function parseAllowedOrigins(value) {
 }
 
 const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
+const ROOM_IDS = ["Genel", "Oyun", "Muzik", "AFK"];
 
 function isOriginAllowed(origin) {
   // Electron file:// and some desktop contexts may send no Origin header.
@@ -103,6 +104,17 @@ function getRoomUsers(roomId) {
     }));
 }
 
+function getRoomCounts() {
+  return ROOM_IDS.reduce((counts, roomId) => {
+    counts[roomId] = [...users.values()].filter((user) => user.roomId === roomId).length;
+    return counts;
+  }, {});
+}
+
+function emitRoomCounts() {
+  io.emit("room-counts", getRoomCounts());
+}
+
 function emitUserList(roomId) {
   if (!roomId) {
     return;
@@ -111,18 +123,32 @@ function emitUserList(roomId) {
   io.to(roomId).emit("user-list", getRoomUsers(roomId));
 }
 
-function leaveRoom(socket) {
+function leaveRoom(socket, reason = "leave") {
   const user = users.get(socket.id);
 
   if (!user?.roomId) {
-    return;
+    return null;
   }
 
   const oldRoomId = user.roomId;
+  const leavingUser = {
+    id: user.id,
+    tag: user.tag,
+    roomId: oldRoomId
+  };
+
+  socket.to(oldRoomId).emit("room-user-left", {
+    user: leavingUser,
+    roomId: oldRoomId,
+    reason
+  });
+
   socket.leave(oldRoomId);
   user.roomId = null;
   user.speaking = false;
   emitUserList(oldRoomId);
+  emitRoomCounts();
+  return oldRoomId;
 }
 
 app.get("/health", (_req, res) => {
@@ -131,7 +157,8 @@ app.get("/health", (_req, res) => {
     service: "minimal-voice-room-signaling",
     environment: NODE_ENV,
     port: PORT,
-    rooms: ["Genel", "Oyun", "Muzik", "AFK"],
+    rooms: ROOM_IDS,
+    roomCounts: getRoomCounts(),
     connectedUsers: users.size
   });
 });
@@ -139,6 +166,7 @@ app.get("/health", (_req, res) => {
 io.on("connection", (socket) => {
   console.log(`[socket] connected ${socket.id}`);
   users.set(socket.id, createDefaultUser(socket.id));
+  socket.emit("room-counts", getRoomCounts());
 
   socket.on("set-tag", (tag) => {
     const user = users.get(socket.id);
@@ -158,20 +186,30 @@ io.on("connection", (socket) => {
 
     if (user.roomId === roomId) {
       emitUserList(roomId);
+      emitRoomCounts();
       return;
     }
 
-    leaveRoom(socket);
+    leaveRoom(socket, "switch");
     user.roomId = roomId;
     user.speaking = false;
     socket.join(roomId);
     console.log(`[room] ${socket.id} joined ${roomId}`);
+    socket.to(roomId).emit("room-user-joined", {
+      user: {
+        id: user.id,
+        tag: user.tag,
+        roomId
+      },
+      roomId
+    });
     emitUserList(roomId);
+    emitRoomCounts();
   });
 
   socket.on("leave-room", () => {
     console.log(`[room] ${socket.id} left room`);
-    leaveRoom(socket);
+    leaveRoom(socket, "leave");
   });
 
   socket.on("mic-state", (micEnabled) => {
@@ -229,12 +267,12 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log(`[socket] disconnected ${socket.id}`);
-    const user = users.get(socket.id);
-    const roomId = user?.roomId || null;
-
-    leaveRoom(socket);
+    const roomId = leaveRoom(socket, "disconnect");
     users.delete(socket.id);
-    emitUserList(roomId);
+    if (roomId) {
+      emitUserList(roomId);
+    }
+    emitRoomCounts();
   });
 });
 

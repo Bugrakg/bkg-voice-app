@@ -7,8 +7,5 @@ contextBridge.exposeInMainWorld("voiceApp", {
     node: process.versions.node
   },
   platform: process.platform,
-  nodeEnv: process.env.NODE_ENV || "development",
-  serverUrl:
-    process.env.SIGNALING_SERVER_URL ||
-    "http://localhost:3001"
+  nodeEnv: process.env.NODE_ENV || "development"
 });

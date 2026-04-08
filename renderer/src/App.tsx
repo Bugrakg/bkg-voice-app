@@ -19,6 +19,7 @@ export default function App() {
     joinRoom,
     leaveRoom,
     outputDevices,
+    roomCounts,
     selectedInputDeviceId,
     selectedOutputDeviceId,
     setTagState,
@@ -127,6 +128,7 @@ export default function App() {
         roomSummary={roomSummary}
         currentRoomId={currentRoomId}
         connectedUsers={connectedUsers}
+        roomCounts={roomCounts}
         socketId={socketId}
         isJoining={isJoining}
         tag={tag}

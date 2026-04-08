@@ -1,4 +1,4 @@
-import type { RoomUser } from "../types";
+import type { RoomCounts, RoomUser } from "../types";
 import { IconButton } from "./IconButton";
 import {
   ExitIcon,
@@ -15,6 +15,7 @@ type VoiceSidebarProps = {
   roomSummary: string;
   currentRoomId: string | null;
   connectedUsers: RoomUser[];
+  roomCounts: RoomCounts;
   socketId: string;
   isJoining: boolean;
   tag: string;
@@ -33,6 +34,7 @@ export function VoiceSidebar({
   roomSummary,
   currentRoomId,
   connectedUsers,
+  roomCounts,
   socketId,
   isJoining,
   tag,
@@ -67,7 +69,7 @@ export function VoiceSidebar({
               disabled={isJoining}
             >
               <span>{room}</span>
-              <small>{currentRoomId === room ? "Bagli" : "Katil"}</small>
+              <small>{roomCounts[room] ?? 0}</small>
             </button>
 
             <div className="room-members">

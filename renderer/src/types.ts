@@ -14,6 +14,18 @@ export type DeviceOption = {
   label: string;
 };
 
+export type RoomCounts = Record<string, number>;
+
+export type RoomPresenceEvent = {
+  user: {
+    id: string;
+    tag: string;
+    roomId: string;
+  };
+  roomId: string;
+  reason?: "leave" | "disconnect" | "switch";
+};
+
 declare global {
   interface HTMLMediaElement {
     setSinkId?: (sinkId: string) => Promise<void>;
@@ -21,11 +33,10 @@ declare global {
 
   interface Window {
     voiceApp?: {
-    platform: string;
-    nodeEnv: string;
-    serverUrl: string;
-    versions: {
-      chrome: string;
+      platform: string;
+      nodeEnv: string;
+      versions: {
+        chrome: string;
         electron: string;
         node: string;
       };

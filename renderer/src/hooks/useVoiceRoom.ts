@@ -1,12 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import { RTC_CONFIG, STORAGE_KEYS } from "../constants";
+import { ROOMS, RTC_CONFIG, STORAGE_KEYS } from "../constants";
 import { createSpeakingMonitor } from "../lib/audio";
 import { getSignalingServerUrl } from "../lib/config";
-import type { DeviceOption, RoomUser } from "../types";
+import type {
+  DeviceOption,
+  RoomCounts,
+  RoomPresenceEvent,
+  RoomUser
+} from "../types";
 
 type PeerMap = Map<string, RTCPeerConnection>;
 type AudioMap = Map<string, HTMLAudioElement>;
+
+function createInitialRoomCounts() {
+  return ROOMS.reduce<RoomCounts>((counts, roomId) => {
+    counts[roomId] = 0;
+    return counts;
+  }, {});
+}
 
 function getStoredValue(key: string) {
   return window.localStorage.getItem(key) || "";
@@ -20,6 +32,9 @@ export function useVoiceRoom() {
   const [hasEntered, setHasEntered] = useState(false);
   const [tag, setTagState] = useState(() => getStoredValue(STORAGE_KEYS.tag));
   const [roomUsers, setRoomUsers] = useState<RoomUser[]>([]);
+  const [roomCounts, setRoomCounts] = useState<RoomCounts>(() =>
+    createInitialRoomCounts()
+  );
   const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
   const [socketId, setSocketId] = useState("");
   const [isMicEnabled, setIsMicEnabled] = useState(true);
@@ -146,11 +161,37 @@ export function useVoiceRoom() {
     socket.on("disconnect", () => {
       setSocketId("");
       setRoomUsers([]);
+      setRoomCounts(createInitialRoomCounts());
+    });
+
+    socket.on("room-counts", (counts: RoomCounts) => {
+      setRoomCounts((currentCounts) => ({
+        ...currentCounts,
+        ...counts
+      }));
     });
 
     socket.on("user-list", (users: RoomUser[]) => {
       setRoomUsers(users);
       void syncPeerConnections(users);
+    });
+
+    socket.on("room-user-joined", (payload: RoomPresenceEvent) => {
+      if (
+        payload.roomId === roomIdRef.current &&
+        payload.user.id !== socketIdRef.current
+      ) {
+        void playNotificationTone("join");
+      }
+    });
+
+    socket.on("room-user-left", (payload: RoomPresenceEvent) => {
+      if (
+        payload.roomId === roomIdRef.current &&
+        payload.user.id !== socketIdRef.current
+      ) {
+        void playNotificationTone("leave");
+      }
     });
 
     socket.on("webrtc-offer", async (payload) => {
@@ -232,6 +273,39 @@ export function useVoiceRoom() {
         socketRef.current?.emit("speaking-state", speaking);
       }
     });
+  }
+
+  async function playNotificationTone(type: "join" | "leave") {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+
+    if (!AudioContextClass) {
+      return;
+    }
+
+    const context = new AudioContextClass();
+    const oscillator = context.createOscillator();
+    const gainNode = context.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.value = type === "join" ? 820 : 520;
+    gainNode.gain.value = 0.0001;
+
+    oscillator.connect(gainNode);
+    gainNode.connect(context.destination);
+
+    const now = context.currentTime;
+    gainNode.gain.exponentialRampToValueAtTime(0.045, now + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+
+    oscillator.start(now);
+    oscillator.stop(now + 0.18);
+
+    window.setTimeout(() => {
+      void context.close();
+    }, 250);
   }
 
   function createPeerConnection(remoteUserId: string) {
@@ -543,6 +617,7 @@ export function useVoiceRoom() {
     joinRoom,
     leaveRoom,
     outputDevices,
+    roomCounts,
     roomUsers,
     selectedInputDeviceId,
     selectedOutputDeviceId,
