@@ -36,9 +36,11 @@ declare global {
 
   interface Window {
     voiceApp?: {
+      debugPtt: boolean;
       platform: string;
       nodeEnv: string;
-      onPushToTalkStateChange?: (callback: (pressed: boolean) => void) => () => void;
+      onPushToTalkDown?: (callback: () => void) => () => void;
+      onPushToTalkUp?: (callback: () => void) => () => void;
       setPushToTalkShortcut?: (shortcut: string) => Promise<{
         ok: boolean;
         shortcut: string;

@@ -7,13 +7,22 @@ contextBridge.exposeInMainWorld("voiceApp", {
     node: process.versions.node
   },
   platform: process.platform,
+  debugPtt: process.env.DEBUG_PTT === "true",
   nodeEnv: process.env.NODE_ENV || "development",
-  onPushToTalkStateChange(callback) {
-    const listener = (_event, pressed) => callback(Boolean(pressed));
-    ipcRenderer.on("push-to-talk-state", listener);
+  onPushToTalkDown(callback) {
+    const listener = () => callback();
+    ipcRenderer.on("ptt-down", listener);
 
     return () => {
-      ipcRenderer.removeListener("push-to-talk-state", listener);
+      ipcRenderer.removeListener("ptt-down", listener);
+    };
+  },
+  onPushToTalkUp(callback) {
+    const listener = () => callback();
+    ipcRenderer.on("ptt-up", listener);
+
+    return () => {
+      ipcRenderer.removeListener("ptt-up", listener);
     };
   },
   setPushToTalkShortcut(shortcut) {

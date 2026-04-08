@@ -11,9 +11,15 @@
   "scripts": {
     "dev": "concurrently -k \"npm run dev --prefix server\" \"npm run dev --prefix renderer\" \"npm run dev:electron\"",
     "dev:electron": "wait-on tcp:3001 http://localhost:5173 && cross-env NODE_ENV=development ELECTRON_RENDERER_URL=http://localhost:5173 electron .",
+    "dev:electron:ptt-debug": "wait-on tcp:3001 http://localhost:5173 && cross-env NODE_ENV=development DEBUG_PTT=true ELECTRON_RENDERER_URL=http://localhost:5173 electron .",
     "build": "npm run build --prefix renderer",
+    "rebuild:native": "electron-builder install-app-deps",
     "dist:win": "npm run build && electron-builder --win nsis",
-    "dist:dir": "npm run build && electron-builder --dir"
+    "dist:dir": "npm run build && electron-builder --dir",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "uiohook-napi": "^1.5.5"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
@@ -34,6 +40,11 @@
       "renderer/dist/**/*",
       "package.json"
     ],
+    "asarUnpack": [
+      "node_modules/uiohook-napi/**/*",
+      "node_modules/node-gyp-build/**/*"
+    ],
+    "npmRebuild": true,
     "win": {
       "target": [
         "nsis"

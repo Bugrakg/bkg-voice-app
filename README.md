@@ -100,6 +100,37 @@ Bu komut sunlari baslatir:
 - renderer: `http://localhost:5173`
 - electron app
 
+## Push-to-Talk
+
+Windows oncelikli global push-to-talk icin `uiohook-napi` kullanilir.
+
+- varsayilan bas-konus tusu: `V`
+- tusa basili tuttugun surece mikrofon iletilir
+- tusu birakinca iletim kapanir
+- uygulama arka plandayken de calisir
+
+Native bagimliligin Electron ile uyumlu kalmasi icin:
+
+```bash
+npm install
+npm run rebuild:native
+```
+
+PTT debug loglarini acmak icin:
+
+```bash
+npm run dev:electron:ptt-debug
+```
+
+Bu modda su loglar gorunur:
+
+- `ptt keydown`
+- `ptt keyup`
+- `renderer received ptt-down`
+- `renderer received ptt-up`
+- `mic opened by ptt`
+- `mic closed by ptt`
+
 Sadece Electron istemcisini farkli signaling URL ile acmak icin:
 
 ```bash

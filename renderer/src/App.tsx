@@ -16,6 +16,7 @@ export default function App() {
     isLocallySpeaking,
     isMicEnabled,
     isOutputEnabled,
+    isPushToTalkActive,
     pushToTalkKey,
     voiceMode,
     joinRoom,
@@ -35,6 +36,8 @@ export default function App() {
     updateTag,
     changeInputDevice,
     changeOutputDevice,
+    startMicTest,
+    stopMicTest,
     setRemoteUserVolume,
     toggleRemoteUserMute,
     changeVoiceMode,
@@ -61,6 +64,15 @@ export default function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (!isSettingsOpen) {
+      void stopMicTest();
+      return;
+    }
+
+    void startMicTest();
+  }, [isSettingsOpen]);
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -142,6 +154,9 @@ export default function App() {
         tag={tag}
         isMicEnabled={isMicEnabled}
         isOutputEnabled={isOutputEnabled}
+        isPushToTalkActive={isPushToTalkActive}
+        pushToTalkKey={pushToTalkKey}
+        voiceMode={voiceMode}
         error={error}
         supportsOutputRouting={supportsOutputRouting}
         remoteUserVolumes={remoteUserVolumes}
@@ -163,6 +178,7 @@ export default function App() {
           outputDevices={outputDevices}
           supportsOutputRouting={supportsOutputRouting}
           isLocallySpeaking={isLocallySpeaking}
+          isPushToTalkActive={isPushToTalkActive}
           pushToTalkKey={pushToTalkKey}
           voiceMode={voiceMode}
           onEditableTagChange={setEditableTag}

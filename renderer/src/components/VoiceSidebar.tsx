@@ -1,4 +1,4 @@
-import type { RoomCounts, RoomMembers, RoomUser } from "../types";
+import type { RoomCounts, RoomMembers, RoomUser, VoiceMode } from "../types";
 import { useEffect, useState } from "react";
 import { IconButton } from "./IconButton";
 import {
@@ -23,6 +23,9 @@ type VoiceSidebarProps = {
   tag: string;
   isMicEnabled: boolean;
   isOutputEnabled: boolean;
+  isPushToTalkActive: boolean;
+  pushToTalkKey: string;
+  voiceMode: VoiceMode;
   error: string;
   supportsOutputRouting: boolean;
   remoteUserVolumes: Record<string, number>;
@@ -46,6 +49,9 @@ export function VoiceSidebar({
   tag,
   isMicEnabled,
   isOutputEnabled,
+  isPushToTalkActive,
+  pushToTalkKey,
+  voiceMode,
   error,
   supportsOutputRouting,
   remoteUserVolumes,
@@ -151,7 +157,13 @@ export function VoiceSidebar({
       <div className="sidebar-footer">
         <div className="sidebar-profile">
           <strong>{tag}</strong>
-          <span>{currentRoomId || "Bagli degil"}</span>
+          <span className={voiceMode === "push-to-talk" && isPushToTalkActive ? "sidebar-profile__ptt" : ""}>
+            {voiceMode === "push-to-talk"
+              ? isPushToTalkActive
+                ? "PTT aktif"
+                : `Bas-Konuş: ${pushToTalkKey}`
+              : currentRoomId || "Bagli degil"}
+          </span>
         </div>
 
         <div className="sidebar-actions">
@@ -202,7 +214,12 @@ export function VoiceSidebar({
         >
           <p className="user-context-menu__title">{contextMenu.tag}</p>
           <label className="user-context-menu__field">
-            <span>Ses Duzeyi</span>
+            <span>
+              Ses Duzeyi
+              <strong className="user-context-menu__value">
+                %{Math.round((remoteUserVolumes[contextMenu.userId] ?? 1) * 100)}
+              </strong>
+            </span>
             <input
               type="range"
               min="0"

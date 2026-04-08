@@ -37,37 +37,6 @@ function readLabel(device: MediaDeviceInfo, fallback: string) {
   return device.label || `${fallback} ${device.deviceId.slice(0, 4)}`;
 }
 
-function keyboardEventToShortcut(event: KeyboardEvent) {
-  const shortcutMap = {
-    Space: "Space",
-    Backquote: "`",
-    Minus: "-",
-    Equal: "=",
-    BracketLeft: "[",
-    BracketRight: "]",
-    Backslash: "\\",
-    Semicolon: ";",
-    Quote: "'",
-    Comma: ",",
-    Period: ".",
-    Slash: "/"
-  };
-
-  if (event.code.startsWith("Key")) {
-    return event.code.replace("Key", "");
-  }
-
-  if (event.code.startsWith("Digit")) {
-    return event.code.replace("Digit", "");
-  }
-
-  if (event.code.startsWith("F")) {
-    return event.code;
-  }
-
-  return shortcutMap[event.code as keyof typeof shortcutMap] || "";
-}
-
 function isEditableTarget(target: EventTarget | null) {
   if (!(target instanceof HTMLElement)) {
     return false;
@@ -80,6 +49,28 @@ function isEditableTarget(target: EventTarget | null) {
     tagName === "textarea" ||
     tagName === "select"
   );
+}
+
+function logPtt(message: string, extra?: unknown) {
+  if (!window.voiceApp?.debugPtt) {
+    return;
+  }
+
+  if (typeof extra === "undefined") {
+    console.log(`[ptt] ${message}`);
+    return;
+  }
+
+  console.log(`[ptt] ${message}`, extra);
+}
+
+function getAppliedRemoteVolume(volume: number) {
+  if (volume <= 0) {
+    return 0;
+  }
+
+  const clampedVolume = Math.max(0, Math.min(1, volume));
+  return Math.min(1, 0.12 + Math.pow(clampedVolume, 0.72) * 0.88);
 }
 
 export function useVoiceRoom() {
@@ -113,7 +104,7 @@ export function useVoiceRoom() {
     return storedVoiceMode === "push-to-talk" ? "push-to-talk" : "open-mic";
   });
   const [pushToTalkKey, setPushToTalkKeyState] = useState(
-    () => getStoredValue(STORAGE_KEYS.pushToTalkKey) || "F8"
+    () => getStoredValue(STORAGE_KEYS.pushToTalkKey) || "V"
   );
   const [isPushToTalkActive, setIsPushToTalkActive] = useState(false);
   const [error, setError] = useState("");
@@ -200,58 +191,44 @@ export function useVoiceRoom() {
   }, [pushToTalkKey]);
 
   useEffect(() => {
-    const unsubscribe = window.voiceApp?.onPushToTalkStateChange?.((pressed) => {
-      setIsPushToTalkActive(pressed);
-    });
-
-    return () => {
-      unsubscribe?.();
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
+    const handlePushToTalkDown = () => {
       if (
         voiceModeRef.current !== "push-to-talk" ||
-        event.defaultPrevented ||
-        isEditableTarget(event.target)
+        isEditableTarget(document.activeElement)
       ) {
         return;
       }
 
-      if (keyboardEventToShortcut(event) !== pushToTalkKey) {
-        return;
-      }
-
+      logPtt("renderer received ptt-down", { shortcut: pushToTalkKey });
       setIsPushToTalkActive(true);
     };
 
-    const handleKeyUp = (event: KeyboardEvent) => {
-      if (voiceModeRef.current !== "push-to-talk") {
-        return;
-      }
-
-      if (keyboardEventToShortcut(event) !== pushToTalkKey) {
-        return;
-      }
-
+    const handlePushToTalkUp = () => {
+      logPtt("renderer received ptt-up", { shortcut: pushToTalkKey });
       setIsPushToTalkActive(false);
     };
 
-    const resetPushToTalkState = () => {
-      setIsPushToTalkActive(false);
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    window.addEventListener("blur", resetPushToTalkState);
+    const unsubscribeDown = window.voiceApp?.onPushToTalkDown?.(handlePushToTalkDown);
+    const unsubscribeUp = window.voiceApp?.onPushToTalkUp?.(handlePushToTalkUp);
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      window.removeEventListener("blur", resetPushToTalkState);
+      unsubscribeDown?.();
+      unsubscribeUp?.();
     };
   }, [pushToTalkKey]);
+
+  useEffect(() => {
+    if (voiceMode !== "push-to-talk") {
+      return;
+    }
+
+    if (isPushToTalkActive) {
+      logPtt("mic opened by ptt");
+      return;
+    }
+
+    logPtt("mic closed by ptt");
+  }, [isPushToTalkActive, voiceMode]);
 
   const connectedUsers = useMemo(
     () => roomUsers.filter((user) => user.roomId === currentRoomId),
@@ -528,15 +505,15 @@ export function useVoiceRoom() {
     gainNode.connect(context.destination);
 
     const now = context.currentTime;
-    gainNode.gain.exponentialRampToValueAtTime(0.045, now + 0.01);
-    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    gainNode.gain.exponentialRampToValueAtTime(type === "join" ? 0.08 : 0.07, now + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
 
     oscillator.start(now);
-    oscillator.stop(now + 0.18);
+    oscillator.stop(now + 0.24);
 
     window.setTimeout(() => {
       void context.close();
-    }, 250);
+    }, 320);
   }
 
   function createPeerConnection(remoteUserId: string) {
@@ -576,7 +553,9 @@ export function useVoiceRoom() {
       const audioElement = getOrCreateAudioElement(remoteUserId);
       audioElement.srcObject = stream;
       audioElement.muted = false;
-      audioElement.volume = outputEnabledRef.current ? getRemoteUserVolume(remoteUserId) : 0;
+      audioElement.volume = outputEnabledRef.current
+        ? getAppliedRemoteVolume(getRemoteUserVolume(remoteUserId))
+        : 0;
       void audioElement.play().catch(() => undefined);
       void applySinkId(audioElement);
     };
@@ -659,7 +638,9 @@ export function useVoiceRoom() {
 
   async function applyOutputPreferences() {
     for (const [peerId, audioElement] of audioElementsRef.current.entries()) {
-      audioElement.volume = outputEnabledRef.current ? getRemoteUserVolume(peerId) : 0;
+      audioElement.volume = outputEnabledRef.current
+        ? getAppliedRemoteVolume(getRemoteUserVolume(peerId))
+        : 0;
       await applySinkId(audioElement);
     }
   }
@@ -679,7 +660,9 @@ export function useVoiceRoom() {
 
     const audioElement = audioElementsRef.current.get(userId);
     if (audioElement) {
-      audioElement.volume = outputEnabledRef.current ? normalizedVolume : 0;
+      audioElement.volume = outputEnabledRef.current
+        ? getAppliedRemoteVolume(normalizedVolume)
+        : 0;
     }
   }
 
@@ -857,6 +840,25 @@ export function useVoiceRoom() {
     window.localStorage.setItem(STORAGE_KEYS.outputDeviceId, deviceId);
   }
 
+  async function startMicTest() {
+    setError("");
+
+    try {
+      await ensureLocalStream();
+    } catch (micError) {
+      console.error(micError);
+      setError("Mikrofon izni alinmadi veya mic test baslatilamadi.");
+    }
+  }
+
+  async function stopMicTest() {
+    if (currentRoomId) {
+      return;
+    }
+
+    await cleanupLocalStreamOnly();
+  }
+
   function changeVoiceMode(nextVoiceMode: VoiceMode) {
     setVoiceModeState(nextVoiceMode);
     window.localStorage.setItem(STORAGE_KEYS.voiceMode, nextVoiceMode);
@@ -896,6 +898,7 @@ export function useVoiceRoom() {
     isLocallySpeaking,
     isMicEnabled,
     isOutputEnabled,
+    isPushToTalkActive,
     pushToTalkKey,
     voiceMode,
     joinRoom,
@@ -916,6 +919,8 @@ export function useVoiceRoom() {
     updateTag,
     changeInputDevice,
     changeOutputDevice,
+    startMicTest,
+    stopMicTest,
     setRemoteUserVolume,
     toggleRemoteUserMute,
     changeVoiceMode,

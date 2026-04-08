@@ -389,8 +389,16 @@ select {
 }
 
 .user-context-menu__field span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   color: #9ca3af;
   font-size: 0.76rem;
+}
+
+.user-context-menu__value {
+  color: #e5e7eb;
+  font-size: 0.82rem;
 }
 
 .user-context-menu__field input[type="range"] {
@@ -434,6 +442,10 @@ select {
 .sidebar-profile span {
   color: #8b95a7;
   font-size: 0.8rem;
+}
+
+.sidebar-profile span.sidebar-profile__ptt {
+  color: #7ee787;
 }
 
 .sidebar-actions {
@@ -667,6 +679,15 @@ select {
 
 .push-to-talk-button--listening {
   border-color: rgba(126, 231, 135, 0.5);
+  color: #7ee787;
+}
+
+.push-to-talk-status {
+  color: #8b95a7;
+  font-size: 0.82rem;
+}
+
+.push-to-talk-status--active {
   color: #7ee787;
 }
 

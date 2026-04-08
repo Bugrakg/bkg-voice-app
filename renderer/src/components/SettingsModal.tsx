@@ -10,6 +10,7 @@ type SettingsModalProps = {
   outputDevices: DeviceOption[];
   supportsOutputRouting: boolean;
   isLocallySpeaking: boolean;
+  isPushToTalkActive: boolean;
   pushToTalkKey: string;
   voiceMode: VoiceMode;
   onEditableTagChange: (value: string) => void;
@@ -61,6 +62,7 @@ export function SettingsModal({
   outputDevices,
   supportsOutputRouting,
   isLocallySpeaking,
+  isPushToTalkActive,
   pushToTalkKey,
   voiceMode,
   onEditableTagChange,
@@ -195,7 +197,7 @@ export function SettingsModal({
                 <span className="voice-mode-card__radio" aria-hidden="true" />
                 <span className="voice-mode-card__content">
                   <strong>Bas-Konuş</strong>
-                  <small>Secilen tusa basarak konusma acilip kapanir.</small>
+                  <small>Secilen tusa basili tuttugun surece mikrofon iletilir.</small>
                 </span>
               </button>
             </div>
@@ -210,10 +212,13 @@ export function SettingsModal({
                 >
                   {isListeningForShortcut ? "Tusa bas..." : pushToTalkKey}
                 </button>
+                <small className={`push-to-talk-status ${isPushToTalkActive ? "push-to-talk-status--active" : ""}`}>
+                  {isPushToTalkActive ? "PTT aktif" : "PTT beklemede"}
+                </small>
               </div>
             ) : null}
             <p className="muted settings-note">
-              Uygulama minimize olsa bile secilen tus ile konusma modunu kullanabilirsin.
+              Uygulama arka plandayken de secilen tusa basili tuttugun surece mikrofon acik kalir.
             </p>
           </section>
 
