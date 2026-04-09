@@ -272,6 +272,16 @@ select {
   word-break: break-word;
 }
 
+.chat-message__link {
+  color: #8fd3ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chat-message__link:hover {
+  color: #b9e6ff;
+}
+
 .chat-panel__composer {
   display: grid;
   grid-template-columns: 1fr auto;

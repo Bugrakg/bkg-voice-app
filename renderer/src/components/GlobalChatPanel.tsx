@@ -13,6 +13,31 @@ function formatMessageTime(createdAt: number) {
   });
 }
 
+function renderMessageText(text: string) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+
+  return parts.map((part, index) => {
+    if (!part.match(/^https?:\/\/[^\s]+$/)) {
+      return <span key={`${part}-${index}`}>{part}</span>;
+    }
+
+    return (
+      <a
+        key={`${part}-${index}`}
+        href={part}
+        className="chat-message__link"
+        onClick={async (event) => {
+          event.preventDefault();
+          await window.voiceApp?.openExternalUrl?.(part);
+        }}
+      >
+        {part}
+      </a>
+    );
+  });
+}
+
 export function GlobalChatPanel({
   messages,
   onSendMessage
@@ -51,7 +76,7 @@ export function GlobalChatPanel({
                 <strong>{message.tag}</strong>
                 <span>{formatMessageTime(message.createdAt)}</span>
               </div>
-              <p>{message.text}</p>
+              <p>{renderMessageText(message.text)}</p>
             </article>
           ))
         ) : (

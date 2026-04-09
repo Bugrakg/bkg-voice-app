@@ -52,6 +52,7 @@ declare global {
       }>;
       openMicrophonePrivacySettings?: () => Promise<boolean>;
       getAppVersion?: () => Promise<string>;
+      openExternalUrl?: (url: string) => Promise<boolean>;
       onPushToTalkDebug?: (callback: (message: string) => void) => () => void;
       versions: {
         chrome: string;

@@ -49,5 +49,8 @@ contextBridge.exposeInMainWorld("voiceApp", {
   },
   getAppVersion() {
     return ipcRenderer.invoke("get-app-version");
+  },
+  openExternalUrl(url) {
+    return ipcRenderer.invoke("open-external-url", url);
   }
 });

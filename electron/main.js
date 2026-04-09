@@ -62,6 +62,22 @@ function createMainWindow() {
   });
 
   mainWindow = window;
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//i.test(url)) {
+      void shell.openExternal(url);
+      return { action: "deny" };
+    }
+
+    return { action: "allow" };
+  });
+  window.webContents.on("will-navigate", (event, url) => {
+    if (!/^https?:\/\//i.test(url)) {
+      return;
+    }
+
+    event.preventDefault();
+    void shell.openExternal(url);
+  });
   window.on("closed", () => {
     if (mainWindow === window) {
       mainWindow = null;
@@ -320,6 +336,20 @@ ipcMain.handle("open-microphone-privacy-settings", () => {
 
 ipcMain.handle("get-app-version", () => {
   return packageJson.version || app.getVersion();
+});
+
+ipcMain.handle("open-external-url", async (_event, url) => {
+  if (typeof url !== "string" || !/^https?:\/\//i.test(url)) {
+    return false;
+  }
+
+  try {
+    await shell.openExternal(url);
+    return true;
+  } catch (error) {
+    console.error("[shell] failed to open external url", error);
+    return false;
+  }
 });
 
 app.on("window-all-closed", () => {
