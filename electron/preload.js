@@ -33,6 +33,14 @@ contextBridge.exposeInMainWorld("voiceApp", {
       ipcRenderer.removeListener("ptt-up", listener);
     };
   },
+  onPushToTalkDebug(callback) {
+    const listener = (_event, message) => callback(String(message || ""));
+    ipcRenderer.on("ptt-debug", listener);
+
+    return () => {
+      ipcRenderer.removeListener("ptt-debug", listener);
+    };
+  },
   setPushToTalkShortcut(shortcut) {
     return ipcRenderer.invoke("set-push-to-talk-shortcut", shortcut);
   },

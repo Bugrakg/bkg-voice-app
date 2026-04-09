@@ -4,6 +4,7 @@ import { ROOMS, RTC_CONFIG, STORAGE_KEYS } from "../constants";
 import { createSpeakingMonitor } from "../lib/audio";
 import { getSignalingServerUrl } from "../lib/config";
 import type {
+  ChatMessage,
   DeviceOption,
   RoomCounts,
   RoomMembers,
@@ -201,6 +202,7 @@ export function useVoiceRoom() {
   const [socketStatus, setSocketStatus] = useState<SocketStatus>("idle");
   const [socketError, setSocketError] = useState("");
   const [diagnostics, setDiagnostics] = useState<string[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
   const socketRef = useRef<Socket | null>(null);
   const peersRef = useRef<PeerMap>(new Map());
@@ -293,15 +295,32 @@ export function useVoiceRoom() {
   }, [isPushToTalkActive]);
 
   useEffect(() => {
-    void window.voiceApp?.setPushToTalkShortcut?.(pushToTalkKey);
+    void window.voiceApp?.setPushToTalkShortcut?.(pushToTalkKey).then((result) => {
+      if (!result) {
+        return;
+      }
+
+      addDiagnosticLog(
+        result.ok
+          ? `PTT kisayolu kaydedildi: ${result.shortcut}`
+          : `PTT kisayolu kaydedilemedi: ${result.shortcut}`
+      );
+    });
   }, [pushToTalkKey]);
 
   useEffect(() => {
+    const unsubscribe = window.voiceApp?.onPushToTalkDebug?.((message) => {
+      addDiagnosticLog(`PTT: ${message}`);
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, []);
+
+  useEffect(() => {
     const handlePushToTalkDown = () => {
-      if (
-        voiceModeRef.current !== "push-to-talk" ||
-        isEditableTarget(document.activeElement)
-      ) {
+      if (voiceModeRef.current !== "push-to-talk") {
         return;
       }
 
@@ -546,6 +565,18 @@ export function useVoiceRoom() {
       addDiagnosticLog(`Aktif oda kullanici listesi geldi: ${users.length} kisi`);
       setRoomUsers(users);
       void syncPeerConnections(users);
+    });
+
+    socket.on("chat-history", (messages: ChatMessage[]) => {
+      addDiagnosticLog(`Genel chat gecmisi alindi: ${messages.length} mesaj`);
+      setChatMessages(messages);
+    });
+
+    socket.on("new-message", (message: ChatMessage) => {
+      setChatMessages((currentMessages) => {
+        const nextMessages = [...currentMessages, message];
+        return nextMessages.slice(-50);
+      });
     });
 
     socket.on("room-user-joined", (payload: RoomPresenceEvent) => {
@@ -1168,6 +1199,15 @@ export function useVoiceRoom() {
     setIsPushToTalkActive(false);
   }
 
+  function sendChatMessage(text: string) {
+    const normalizedText = text.trim();
+    if (!normalizedText) {
+      return;
+    }
+
+    getSocket().emit("send-message", normalizedText);
+  }
+
   useEffect(() => {
     const handleDeviceChange = () => {
       void refreshDevices();
@@ -1205,6 +1245,7 @@ export function useVoiceRoom() {
     roomUsers,
     socketError,
     socketStatus,
+    chatMessages,
     remoteUserVolumes,
     selectedInputDeviceId,
     selectedOutputDeviceId,
@@ -1223,6 +1264,7 @@ export function useVoiceRoom() {
     setRemoteUserVolume,
     toggleRemoteUserMute,
     changeVoiceMode,
-    changePushToTalkKey
+    changePushToTalkKey,
+    sendChatMessage
   };
 }

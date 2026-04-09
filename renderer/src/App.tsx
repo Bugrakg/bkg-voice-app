@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { GlobalChatPanel } from "./components/GlobalChatPanel";
 import { LoginScreen } from "./components/LoginScreen";
 import { SettingsModal } from "./components/SettingsModal";
 import { VoiceSidebar } from "./components/VoiceSidebar";
@@ -28,6 +29,7 @@ export default function App() {
     roomMembers,
     socketError,
     socketStatus,
+    chatMessages,
     remoteUserVolumes,
     selectedInputDeviceId,
     selectedOutputDeviceId,
@@ -46,7 +48,8 @@ export default function App() {
     setRemoteUserVolume,
     toggleRemoteUserMute,
     changeVoiceMode,
-    changePushToTalkKey
+    changePushToTalkKey,
+    sendChatMessage
   } = useVoiceRoom();
 
   const [loginTag, setLoginTag] = useState(tag);
@@ -174,6 +177,11 @@ export default function App() {
         onLeaveRoom={leaveRoom}
         onRemoteUserVolumeChange={setRemoteUserVolume}
         onToggleRemoteUserMute={toggleRemoteUserMute}
+      />
+
+      <GlobalChatPanel
+        messages={chatMessages}
+        onSendMessage={sendChatMessage}
       />
 
       {isSettingsOpen ? (

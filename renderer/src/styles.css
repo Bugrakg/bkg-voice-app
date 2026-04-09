@@ -178,7 +178,7 @@ select {
 }
 
 .sidebar {
-  width: 100%;
+  width: min(100%, 420px);
   min-height: 100vh;
   padding: 16px;
   display: flex;
@@ -187,7 +187,95 @@ select {
 }
 
 .sidebar--full {
-  width: 100%;
+  width: min(100%, 420px);
+  flex: 0 0 min(100%, 420px);
+}
+
+.chat-panel {
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  padding: 18px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: rgba(14, 17, 22, 0.84);
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.chat-panel__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chat-panel__header h2 {
+  margin: 0;
+}
+
+.chat-panel__count {
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(126, 231, 135, 0.1);
+  color: #8ff0a4;
+  font-size: 0.76rem;
+}
+
+.chat-panel__messages {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding-right: 4px;
+}
+
+.chat-panel__empty {
+  margin: 0;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  color: #9ca3af;
+}
+
+.chat-message {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.chat-message__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chat-message__meta strong {
+  font-size: 0.94rem;
+}
+
+.chat-message__meta span {
+  color: #8b95a7;
+  font-size: 0.76rem;
+}
+
+.chat-message p {
+  margin: 0;
+  color: #dbe3ee;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.chat-panel__composer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
 }
 
 .panel-heading {
@@ -812,12 +900,24 @@ select {
 
 @media (max-width: 980px) {
   .app-shell {
+    flex-direction: column;
     justify-content: stretch;
   }
 
   .sidebar {
     width: 100%;
     min-height: 100vh;
+  }
+
+  .sidebar--full {
+    width: 100%;
+    flex-basis: auto;
+  }
+
+  .chat-panel {
+    min-height: 50vh;
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
   }
 
   .sidebar-footer,
@@ -868,5 +968,9 @@ select {
 
   .settings-grid {
     gap: 14px;
+  }
+
+  .chat-panel__composer {
+    grid-template-columns: 1fr;
   }
 }

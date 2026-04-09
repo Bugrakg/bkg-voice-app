@@ -17,7 +17,19 @@ let keydownListener = null;
 let keyupListener = null;
 let hasShownUpdateDialog = false;
 
+function sendPushToTalkDebug(message) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.webContents.send("ptt-debug", message);
+}
+
 function logPtt(message, extra) {
+  sendPushToTalkDebug(
+    typeof extra === "undefined" ? message : `${message} ${JSON.stringify(extra)}`
+  );
+
   if (!debugPtt) {
     return;
   }
@@ -34,9 +46,9 @@ function createMainWindow() {
   Menu.setApplicationMenu(null);
 
   const window = new BrowserWindow({
-    width: 500,
+    width: 1080,
     height: 860,
-    minWidth: 360,
+    minWidth: 860,
     minHeight: 520,
     backgroundColor: "#111317",
     title: "BKG Voice App",
@@ -126,6 +138,7 @@ function setupPushToTalkListeners() {
     ({ uIOhook, UiohookKey } = require("uiohook-napi"));
   } catch (error) {
     console.error("[ptt] uiohook-napi could not be loaded.", error);
+    sendPushToTalkDebug("uiohook-napi yuklenemedi");
     return false;
   }
 
@@ -133,6 +146,7 @@ function setupPushToTalkListeners() {
 
   if (!pushToTalkKeycode) {
     console.warn(`[ptt] Unsupported push-to-talk key: ${pushToTalkShortcut}`);
+    sendPushToTalkDebug(`desteklenmeyen PTT tusu: ${pushToTalkShortcut}`);
     return false;
   }
 

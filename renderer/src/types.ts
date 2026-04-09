@@ -29,6 +29,12 @@ export type RoomPresenceEvent = {
 
 export type VoiceMode = "open-mic" | "push-to-talk";
 export type SocketStatus = "idle" | "connecting" | "connected" | "error";
+export type ChatMessage = {
+  id: string;
+  tag: string;
+  text: string;
+  createdAt: number;
+};
 
 declare global {
   interface Window {
@@ -46,6 +52,7 @@ declare global {
       }>;
       openMicrophonePrivacySettings?: () => Promise<boolean>;
       getAppVersion?: () => Promise<string>;
+      onPushToTalkDebug?: (callback: (message: string) => void) => () => void;
       versions: {
         chrome: string;
         electron: string;

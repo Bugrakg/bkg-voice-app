@@ -26,6 +26,7 @@ function parseAllowedOrigins(value) {
 
 const allowedOrigins = parseAllowedOrigins(process.env.ALLOWED_ORIGINS);
 const ROOM_IDS = ["Genel", "Oyun", "Muzik", "AFK"];
+const MAX_CHAT_MESSAGES = 50;
 
 function isOriginAllowed(origin) {
   // Electron file:// and some desktop contexts may send no Origin header.
@@ -79,6 +80,7 @@ const io = new Server(server, {
 });
 
 const users = new Map();
+const chatMessages = [];
 
 function createDefaultUser(id) {
   return {
@@ -134,6 +136,23 @@ function emitUserList(roomId) {
   io.to(roomId).emit("user-list", getRoomUsers(roomId));
 }
 
+function createChatMessage(user, text) {
+  return {
+    id: `${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    tag: user.tag,
+    text,
+    createdAt: Date.now()
+  };
+}
+
+function pushChatMessage(message) {
+  chatMessages.push(message);
+
+  if (chatMessages.length > MAX_CHAT_MESSAGES) {
+    chatMessages.splice(0, chatMessages.length - MAX_CHAT_MESSAGES);
+  }
+}
+
 function leaveRoom(socket, reason = "leave") {
   const user = users.get(socket.id);
 
@@ -180,6 +199,7 @@ io.on("connection", (socket) => {
   users.set(socket.id, createDefaultUser(socket.id));
   socket.emit("room-counts", getRoomCounts());
   socket.emit("room-members", getRoomMembers());
+  socket.emit("chat-history", chatMessages);
 
   socket.on("set-tag", (tag) => {
     const user = users.get(socket.id);
@@ -190,6 +210,22 @@ io.on("connection", (socket) => {
     user.tag = String(tag || "").trim().slice(0, 24) || user.tag;
     emitUserList(user.roomId);
     emitRoomMembers();
+  });
+
+  socket.on("send-message", (text) => {
+    const user = users.get(socket.id);
+    if (!user) {
+      return;
+    }
+
+    const normalizedText = String(text || "").trim().slice(0, 500);
+    if (!normalizedText) {
+      return;
+    }
+
+    const message = createChatMessage(user, normalizedText);
+    pushChatMessage(message);
+    io.emit("new-message", message);
   });
 
   socket.on("join-room", (roomId) => {
