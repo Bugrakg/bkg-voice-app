@@ -153,7 +153,7 @@ function createAudioConstraints(deviceId?: string): MediaTrackConstraints {
     autoGainControl: true
   };
 
-  if (!deviceId) {
+  if (!deviceId || deviceId === "default" || deviceId === "communications") {
     return baseConstraints;
   }
 
@@ -161,6 +161,24 @@ function createAudioConstraints(deviceId?: string): MediaTrackConstraints {
     ...baseConstraints,
     deviceId: { exact: deviceId }
   };
+}
+
+function canRetryAudioSource(error: unknown) {
+  if (error instanceof DOMException) {
+    return (
+      error.name === "NotReadableError" ||
+      error.name === "TrackStartError" ||
+      error.name === "NotFoundError" ||
+      error.name === "DevicesNotFoundError" ||
+      error.name === "OverconstrainedError"
+    );
+  }
+
+  if (error instanceof Error) {
+    return /could not start audio source/i.test(error.message);
+  }
+
+  return false;
 }
 
 export function useVoiceRoom() {
@@ -718,12 +736,7 @@ export function useVoiceRoom() {
         audio: createAudioConstraints(targetDeviceId)
       });
     } catch (error) {
-      const canRetryWithDefaultMic =
-        Boolean(targetDeviceId) &&
-        error instanceof DOMException &&
-        (error.name === "NotFoundError" ||
-          error.name === "DevicesNotFoundError" ||
-          error.name === "OverconstrainedError");
+      const canRetryWithDefaultMic = canRetryAudioSource(error);
 
       if (!canRetryWithDefaultMic) {
         throw error;
@@ -737,6 +750,8 @@ export function useVoiceRoom() {
       window.localStorage.removeItem(STORAGE_KEYS.inputDeviceId);
       setSelectedInputDeviceId("");
       selectedInputDeviceIdRef.current = "";
+
+      await new Promise((resolve) => window.setTimeout(resolve, 120));
 
       stream = await navigator.mediaDevices.getUserMedia({
         audio: createAudioConstraints()

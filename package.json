@@ -1,6 +1,6 @@
 {
   "name": "minimal-voice-room",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "private": true,
   "description": "Minimal Electron voice room MVP for small friend groups.",
   "main": "electron/main.js",
