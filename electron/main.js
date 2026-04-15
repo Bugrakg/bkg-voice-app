@@ -16,6 +16,28 @@ let uiohookStarted = false;
 let keydownListener = null;
 let keyupListener = null;
 let hasShownUpdateDialog = false;
+let currentUpdaterState = {
+  visible: false,
+  status: "idle",
+  title: "",
+  detail: "",
+  progressPercent: 0,
+  bytesPerSecond: 0,
+  version: ""
+};
+
+function sendUpdaterState(nextState) {
+  currentUpdaterState = {
+    ...currentUpdaterState,
+    ...nextState
+  };
+
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.webContents.send("updater-state", currentUpdaterState);
+}
 
 function loadUiohookModule() {
   try {
@@ -111,6 +133,9 @@ function createMainWindow() {
     if (mainWindow === window) {
       mainWindow = null;
     }
+  });
+  window.webContents.on("did-finish-load", () => {
+    sendUpdaterState(currentUpdaterState);
   });
 
   if (isDev) {
@@ -289,18 +314,53 @@ function setupAutoUpdates() {
 
   autoUpdater.on("checking-for-update", () => {
     console.log("[updater] checking-for-update");
+    sendUpdaterState({
+      visible: true,
+      status: "checking",
+      title: "Guncellemeler kontrol ediliyor",
+      detail: "Uygulama yeni bir surum var mi diye bakiyor.",
+      progressPercent: 0,
+      bytesPerSecond: 0,
+      version: ""
+    });
   });
 
   autoUpdater.on("update-available", (info) => {
     console.log("[updater] update-available", info.version);
+    sendUpdaterState({
+      visible: true,
+      status: "available",
+      title: "Yeni surum bulundu",
+      detail: `${info.version} surumu indirilmeye basladi.`,
+      version: info.version || "",
+      progressPercent: 0,
+      bytesPerSecond: 0
+    });
   });
 
   autoUpdater.on("update-not-available", (info) => {
     console.log("[updater] update-not-available", info.version);
+    sendUpdaterState({
+      visible: false,
+      status: "idle",
+      title: "",
+      detail: "",
+      progressPercent: 0,
+      bytesPerSecond: 0,
+      version: info.version || ""
+    });
   });
 
   autoUpdater.on("error", (error) => {
     console.error("[updater] error", error);
+    sendUpdaterState({
+      visible: true,
+      status: "error",
+      title: "Guncelleme kontrolunde sorun oldu",
+      detail: error?.message || "Guncelleme servisine su an ulasilamiyor.",
+      progressPercent: 0,
+      bytesPerSecond: 0
+    });
   });
 
   autoUpdater.on("download-progress", (progress) => {
@@ -309,10 +369,27 @@ function setupAutoUpdates() {
         progress.bytesPerSecond
       )} B/s)`
     );
+    sendUpdaterState({
+      visible: true,
+      status: "downloading",
+      title: "Yeni surum indiriliyor",
+      detail: "Indirme surerken uygulamayi kullanmaya devam edebilirsin.",
+      progressPercent: Math.round(progress.percent),
+      bytesPerSecond: Math.round(progress.bytesPerSecond)
+    });
   });
 
   autoUpdater.on("update-downloaded", async (info) => {
     console.log("[updater] update-downloaded", info.version);
+    sendUpdaterState({
+      visible: true,
+      status: "downloaded",
+      title: "Guncelleme hazir",
+      detail: "Indirme tamamlandi. Yeniden baslatinca yeni surume gececeksin.",
+      progressPercent: 100,
+      bytesPerSecond: 0,
+      version: info.version || ""
+    });
 
     if (hasShownUpdateDialog) {
       return;
@@ -389,6 +466,10 @@ ipcMain.handle("open-microphone-privacy-settings", () => {
 
 ipcMain.handle("get-app-version", () => {
   return packageJson.version || app.getVersion();
+});
+
+ipcMain.handle("get-updater-state", () => {
+  return currentUpdaterState;
 });
 
 ipcMain.handle("open-external-url", async (_event, url) => {

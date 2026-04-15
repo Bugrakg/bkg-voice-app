@@ -37,6 +37,24 @@ export type ChatMessage = {
   createdAt: number;
 };
 
+export type UpdaterStatus =
+  | "idle"
+  | "checking"
+  | "available"
+  | "downloading"
+  | "downloaded"
+  | "error";
+
+export type UpdaterState = {
+  visible: boolean;
+  status: UpdaterStatus;
+  title: string;
+  detail: string;
+  progressPercent: number;
+  bytesPerSecond: number;
+  version: string;
+};
+
 declare global {
   interface Window {
     voiceApp?: {
@@ -53,6 +71,8 @@ declare global {
       }>;
       openMicrophonePrivacySettings?: () => Promise<boolean>;
       getAppVersion?: () => Promise<string>;
+      getUpdaterState?: () => Promise<UpdaterState>;
+      onUpdaterState?: (callback: (state: UpdaterState) => void) => () => void;
       openExternalUrl?: (url: string) => Promise<boolean>;
       onPushToTalkDebug?: (callback: (message: string) => void) => () => void;
       versions: {

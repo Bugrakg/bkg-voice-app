@@ -3,8 +3,20 @@ import { GlobalChatPanel } from "./components/GlobalChatPanel";
 import { LoginScreen } from "./components/LoginScreen";
 import { ScreenSharePanel } from "./components/ScreenSharePanel";
 import { SettingsModal } from "./components/SettingsModal";
+import { UpdaterStatusCard } from "./components/UpdaterStatusCard";
 import { VoiceSidebar } from "./components/VoiceSidebar";
 import { useVoiceRoom } from "./hooks/useVoiceRoom";
+import type { UpdaterState } from "./types";
+
+const INITIAL_UPDATER_STATE: UpdaterState = {
+  visible: false,
+  status: "idle",
+  title: "",
+  detail: "",
+  progressPercent: 0,
+  bytesPerSecond: 0,
+  version: ""
+};
 
 export default function App() {
   const {
@@ -67,6 +79,7 @@ export default function App() {
   const [editableTag, setEditableTag] = useState(tag);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activePanel, setActivePanel] = useState<"chat" | "screen">("chat");
+  const [updaterState, setUpdaterState] = useState<UpdaterState>(INITIAL_UPDATER_STATE);
   const outputTestAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const roomSummary = useMemo(
@@ -102,6 +115,22 @@ export default function App() {
     closeScreenShareView();
     setActivePanel("chat");
   };
+
+  useEffect(() => {
+    void window.voiceApp?.getUpdaterState?.().then((state) => {
+      if (state) {
+        setUpdaterState(state);
+      }
+    });
+
+    const unsubscribe = window.voiceApp?.onUpdaterState?.((state) => {
+      setUpdaterState(state);
+    });
+
+    return () => {
+      unsubscribe?.();
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -184,21 +213,25 @@ export default function App() {
 
   if (!hasEntered) {
     return (
-      <LoginScreen
-        loginTag={loginTag}
-        error={error}
-        onTagChange={(value) => {
-          setLoginTag(value);
-          setTagState(value);
-        }}
-        onSubmit={handleLogin}
-      />
+      <>
+        <LoginScreen
+          loginTag={loginTag}
+          error={error}
+          onTagChange={(value) => {
+            setLoginTag(value);
+            setTagState(value);
+          }}
+          onSubmit={handleLogin}
+        />
+        <UpdaterStatusCard state={updaterState} />
+      </>
     );
   }
 
   return (
-    <main className="app-shell">
-      <VoiceSidebar
+    <>
+      <main className="app-shell">
+        <VoiceSidebar
         activePanel={activePanel}
         roomSummary={roomSummary}
         currentRoomId={currentRoomId}
@@ -254,24 +287,24 @@ export default function App() {
         onToggleRemoteUserMute={toggleRemoteUserMute}
       />
 
-      <section className="content-panel">
-        {activePanel === "screen" && sharedScreenStream && sharedScreenOwnerTag ? (
-          <ScreenSharePanel
-            stream={sharedScreenStream}
-            ownerTag={sharedScreenOwnerTag}
-            isSelf={sharedScreenOwnerId === socketId}
-            onLeaveView={leaveScreenShareView}
-          />
-        ) : (
-          <GlobalChatPanel
-            messages={chatMessages}
-            onSendMessage={sendChatMessage}
-          />
-        )}
-      </section>
+        <section className="content-panel">
+          {activePanel === "screen" && sharedScreenStream && sharedScreenOwnerTag ? (
+            <ScreenSharePanel
+              stream={sharedScreenStream}
+              ownerTag={sharedScreenOwnerTag}
+              isSelf={sharedScreenOwnerId === socketId}
+              onLeaveView={leaveScreenShareView}
+            />
+          ) : (
+            <GlobalChatPanel
+              messages={chatMessages}
+              onSendMessage={sendChatMessage}
+            />
+          )}
+        </section>
 
-      {isSettingsOpen ? (
-        <SettingsModal
+        {isSettingsOpen ? (
+          <SettingsModal
           editableTag={editableTag}
           selectedInputDeviceId={selectedInputDeviceId}
           selectedOutputDeviceId={selectedOutputDeviceId}
@@ -295,8 +328,10 @@ export default function App() {
           onChangeVoiceMode={changeVoiceMode}
           onChangePushToTalkKey={changePushToTalkKey}
           onChangeInputSensitivity={changeInputSensitivity}
-        />
-      ) : null}
-    </main>
+          />
+        ) : null}
+      </main>
+      <UpdaterStatusCard state={updaterState} />
+    </>
   );
 }

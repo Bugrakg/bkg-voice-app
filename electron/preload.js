@@ -50,6 +50,17 @@ contextBridge.exposeInMainWorld("voiceApp", {
   getAppVersion() {
     return ipcRenderer.invoke("get-app-version");
   },
+  getUpdaterState() {
+    return ipcRenderer.invoke("get-updater-state");
+  },
+  onUpdaterState(callback) {
+    const listener = (_event, state) => callback(state);
+    ipcRenderer.on("updater-state", listener);
+
+    return () => {
+      ipcRenderer.removeListener("updater-state", listener);
+    };
+  },
   openExternalUrl(url) {
     return ipcRenderer.invoke("open-external-url", url);
   }

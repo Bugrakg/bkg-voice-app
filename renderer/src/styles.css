@@ -171,6 +171,114 @@ select {
   overflow: hidden;
 }
 
+.updater-card {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 1200;
+  width: min(360px, calc(100vw - 36px));
+  padding: 16px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top left, rgba(126, 231, 135, 0.12), transparent 32%),
+    rgba(12, 15, 20, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.36);
+  backdrop-filter: blur(12px);
+}
+
+.updater-card--error {
+  background:
+    radial-gradient(circle at top left, rgba(248, 113, 113, 0.12), transparent 32%),
+    rgba(18, 12, 14, 0.95);
+}
+
+.updater-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.updater-card__badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(126, 231, 135, 0.12);
+  color: #dfffe2;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.updater-card__icon {
+  width: 20px;
+  height: 20px;
+  color: #8ff0a4;
+}
+
+.updater-card--error .updater-card__icon {
+  color: #fca5a5;
+}
+
+.updater-card__icon--spin {
+  animation: updater-spin 1.2s linear infinite;
+}
+
+.updater-card__content {
+  display: grid;
+  gap: 6px;
+}
+
+.updater-card__content strong {
+  font-size: 0.95rem;
+}
+
+.updater-card__content p {
+  margin: 0;
+  color: #9ca8ba;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.updater-card__progress {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.updater-card__progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #dbe3ee;
+  font-size: 0.76rem;
+}
+
+.updater-card__progress-track {
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.updater-card__progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #64d994 0%, #8ff0a4 100%);
+}
+
+.updater-card__hint {
+  margin: 12px 0 0;
+  color: #8b95a7;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
 .sidebar {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 0;
@@ -1151,6 +1259,16 @@ select {
     box-shadow:
       0 0 0 1px rgba(126, 231, 135, 0.6),
       0 0 48px rgba(126, 231, 135, 0.34);
+  }
+}
+
+@keyframes updater-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
 
