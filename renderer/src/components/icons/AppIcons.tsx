@@ -42,6 +42,14 @@ export function SettingsIcon() {
   );
 }
 
+export function ScreenShareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-4.5l1.7 2H18a1 1 0 1 1 0 2H6a1 1 0 1 1 0-2h2.8l1.7-2H6a2 2 0 0 1-2-2V5Zm2 0v8h12V5H6Zm6 1.5a1 1 0 0 1 1 1v1.08l1.3-1.29a1 1 0 1 1 1.4 1.42L14.42 10l1.29 1.29a1 1 0 1 1-1.42 1.42L13 11.42V12.5a1 1 0 1 1-2 0v-1.08l-1.29 1.29a1 1 0 1 1-1.42-1.42L9.58 10 8.29 8.71a1 1 0 0 1 1.42-1.42L11 8.58V7.5a1 1 0 0 1 1-1Z" />
+    </svg>
+  );
+}
+
 export function ExitIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">

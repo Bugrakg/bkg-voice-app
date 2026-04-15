@@ -194,13 +194,82 @@ select {
 .chat-panel {
   flex: 1;
   min-width: 0;
-  min-height: 100vh;
+  min-height: 0;
   padding: 18px 18px 16px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   background: rgba(14, 17, 22, 0.84);
+}
+
+.screen-panel {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 18px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: rgba(14, 17, 22, 0.92);
+}
+
+.content-panel {
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(14, 17, 22, 0.92);
   border-left: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.content-panel__tabs {
+  display: flex;
+  gap: 8px;
+  padding: 14px 18px 0;
+}
+
+.content-panel__tab {
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #aab3c2;
+  padding: 10px 14px;
+}
+
+.content-panel__tab--active {
+  background: rgba(126, 231, 135, 0.14);
+  color: #dfffe2;
+}
+
+.screen-panel__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.screen-panel__header h2 {
+  margin: 0;
+}
+
+.screen-panel__surface {
+  flex: 1;
+  min-height: 0;
+  border-radius: 20px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(126, 231, 135, 0.09), transparent 22%),
+    #0b0e12;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+}
+
+.screen-panel__video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #05070a;
 }
 
 .chat-panel__header {
@@ -441,6 +510,47 @@ select {
   color: #cbd5e1;
   font-size: 0.78rem;
   justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.user-row__screen-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(126, 231, 135, 0.14);
+  border: 1px solid rgba(126, 231, 135, 0.2);
+  color: #7ee787;
+  font-size: 0.66rem;
+  font-style: normal;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.user-row__screen-badge em {
+  font-style: normal;
+}
+
+.user-row__screen-badge svg {
+  display: inline-flex;
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.user-row__join-screen {
+  border: 0;
+  border-radius: 8px;
+  background: rgba(126, 231, 135, 0.14);
+  color: #9ef4af;
+  padding: 6px 8px;
+  font-size: 0.72rem;
+}
+
+.user-row__join-screen:hover {
+  background: rgba(126, 231, 135, 0.22);
 }
 
 .status-icon {
@@ -462,6 +572,11 @@ select {
 
 .status-icon--off {
   color: #fca5a5;
+}
+
+.status-icon--screen {
+  color: #7ee787;
+  background: rgba(126, 231, 135, 0.14);
 }
 
 .user-context-menu {

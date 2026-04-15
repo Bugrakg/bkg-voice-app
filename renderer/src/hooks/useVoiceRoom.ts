@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import { ROOMS, RTC_CONFIG, STORAGE_KEYS } from "../constants";
-import { createSpeakingMonitor } from "../lib/audio";
+import { DEFAULT_ICE_SERVERS, ROOMS, STORAGE_KEYS } from "../constants";
+import { createMicrophoneProcessor, createSpeakingMonitor } from "../lib/audio";
 import { getSignalingServerUrl } from "../lib/config";
 import type {
   ChatMessage,
@@ -185,6 +185,7 @@ export function useVoiceRoom() {
   const [hasEntered, setHasEntered] = useState(false);
   const [tag, setTagState] = useState(() => getStoredValue(STORAGE_KEYS.tag));
   const [roomUsers, setRoomUsers] = useState<RoomUser[]>([]);
+  const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [roomCounts, setRoomCounts] = useState<RoomCounts>(() =>
     createInitialRoomCounts()
   );
@@ -197,6 +198,10 @@ export function useVoiceRoom() {
   const [isOutputEnabled, setIsOutputEnabled] = useState(true);
   const [inputDevices, setInputDevices] = useState<DeviceOption[]>([]);
   const [outputDevices, setOutputDevices] = useState<DeviceOption[]>([]);
+  const [inputSensitivity, setInputSensitivity] = useState(() => {
+    const storedValue = Number(getStoredValue(STORAGE_KEYS.inputSensitivity));
+    return Number.isFinite(storedValue) ? Math.max(0, Math.min(100, storedValue)) : 0;
+  });
   const [remoteUserVolumes, setRemoteUserVolumes] = useState<Record<string, number>>({});
   const [selectedInputDeviceId, setSelectedInputDeviceId] = useState(() =>
     getStoredValue(STORAGE_KEYS.inputDeviceId)
@@ -221,12 +226,22 @@ export function useVoiceRoom() {
   const [socketError, setSocketError] = useState("");
   const [diagnostics, setDiagnostics] = useState<string[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [selectedScreenShareOwnerId, setSelectedScreenShareOwnerId] = useState<string | null>(
+    null
+  );
+  const [sharedScreenOwnerId, setSharedScreenOwnerId] = useState<string | null>(null);
+  const [sharedScreenOwnerTag, setSharedScreenOwnerTag] = useState("");
+  const [sharedScreenStream, setSharedScreenStream] = useState<MediaStream | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const peersRef = useRef<PeerMap>(new Map());
+  const screenSendersRef = useRef<Map<string, RTCRtpSender[]>>(new Map());
   const audioElementsRef = useRef<AudioMap>(new Map());
+  const remoteVideoStreamsRef = useRef<Map<string, MediaStream>>(new Map());
   const remoteStreamsRef = useRef<Map<string, MediaStream>>(new Map());
   const localStreamRef = useRef<MediaStream | null>(null);
+  const localScreenStreamRef = useRef<MediaStream | null>(null);
+  const rawLocalStreamRef = useRef<MediaStream | null>(null);
   const tagRef = useRef(tag);
   const roomIdRef = useRef<string | null>(currentRoomId);
   const socketIdRef = useRef(socketId);
@@ -237,6 +252,13 @@ export function useVoiceRoom() {
   const remoteUserVolumesRef = useRef<Record<string, number>>({});
   const voiceModeRef = useRef<VoiceMode>(voiceMode);
   const pushToTalkActiveRef = useRef(isPushToTalkActive);
+  const inputSensitivityRef = useRef(inputSensitivity);
+  const microphoneProcessorRef = useRef<ReturnType<
+    typeof createMicrophoneProcessor
+  > | null>(null);
+  const rtcConfigurationRef = useRef<RTCConfiguration>({
+    iceServers: DEFAULT_ICE_SERVERS
+  });
   const speakingMonitorRef = useRef<Awaited<
     ReturnType<typeof createSpeakingMonitor>
   > | null>(null);
@@ -299,6 +321,11 @@ export function useVoiceRoom() {
   useEffect(() => {
     selectedInputDeviceIdRef.current = selectedInputDeviceId;
   }, [selectedInputDeviceId]);
+
+  useEffect(() => {
+    inputSensitivityRef.current = inputSensitivity;
+    microphoneProcessorRef.current?.setThresholdPercent(inputSensitivity);
+  }, [inputSensitivity]);
 
   useEffect(() => {
     remoteUserVolumesRef.current = remoteUserVolumes;
@@ -416,6 +443,41 @@ export function useVoiceRoom() {
     () => roomUsers.filter((user) => user.roomId === currentRoomId),
     [currentRoomId, roomUsers]
   );
+
+  useEffect(() => {
+    if (!selectedScreenShareOwnerId) {
+      setSharedScreenOwnerId(null);
+      setSharedScreenOwnerTag("");
+      setSharedScreenStream(null);
+      return;
+    }
+
+    const selectedScreenUser = connectedUsers.find(
+      (user) => user.id === selectedScreenShareOwnerId && user.screenSharing
+    );
+
+    if (!selectedScreenUser) {
+      setSelectedScreenShareOwnerId(null);
+      setSharedScreenOwnerId(null);
+      setSharedScreenOwnerTag("");
+      setSharedScreenStream(null);
+      return;
+    }
+
+    setSharedScreenOwnerId(selectedScreenUser.id);
+    setSharedScreenOwnerTag(selectedScreenUser.tag);
+
+    if (
+      selectedScreenUser.id === socketIdRef.current &&
+      localScreenStreamRef.current
+    ) {
+      setSharedScreenStream(localScreenStreamRef.current);
+      return;
+    }
+
+    const remoteScreenStream = remoteVideoStreamsRef.current.get(selectedScreenUser.id);
+    setSharedScreenStream(remoteScreenStream || null);
+  }, [connectedUsers, selectedScreenShareOwnerId]);
 
   function shouldTransmitMic() {
     if (!isMicEnabled) {
@@ -553,6 +615,10 @@ export function useVoiceRoom() {
       setRoomUsers([]);
       setRoomCounts(createInitialRoomCounts());
       setRoomMembers(createInitialRoomMembers());
+      setSelectedScreenShareOwnerId(null);
+      setSharedScreenOwnerId(null);
+      setSharedScreenOwnerTag("");
+      setSharedScreenStream(null);
     });
 
     socket.on("connect_error", (connectError) => {
@@ -616,7 +682,6 @@ export function useVoiceRoom() {
     });
 
     socket.on("webrtc-offer", async (payload) => {
-      await ensureLocalStream();
       const peer = createPeerConnection(payload.from);
 
       await peer.setRemoteDescription(new RTCSessionDescription(payload.sdp));
@@ -649,6 +714,36 @@ export function useVoiceRoom() {
 
     socketRef.current = socket;
     return socket;
+  }
+
+  async function ensureRtcConfiguration() {
+    const signalingUrl = getSignalingServerUrl();
+
+    try {
+      const response = await fetch(`${signalingUrl}/ice-servers`);
+      if (!response.ok) {
+        throw new Error(`ice-servers request failed: ${response.status}`);
+      }
+
+      const payload = (await response.json()) as {
+        iceServers?: RTCIceServer[];
+      };
+
+      if (Array.isArray(payload.iceServers) && payload.iceServers.length > 0) {
+        rtcConfigurationRef.current = {
+          iceServers: payload.iceServers
+        };
+        addDiagnosticLog(`ICE server listesi alindi: ${payload.iceServers.length}`);
+        return;
+      }
+    } catch (error) {
+      console.error("[webrtc] failed to load ice servers", error);
+      addDiagnosticLog("ICE server listesi alinamadi, varsayilan STUN kullaniliyor");
+    }
+
+    rtcConfigurationRef.current = {
+      iceServers: DEFAULT_ICE_SERVERS
+    };
   }
 
   async function waitForSocketConnection(timeoutMs = 12000) {
@@ -724,7 +819,7 @@ export function useVoiceRoom() {
       selectedInputDeviceIdRef.current = "";
     }
 
-    let stream: MediaStream;
+    let rawStream: MediaStream;
 
     try {
       addDiagnosticLog(
@@ -732,7 +827,7 @@ export function useVoiceRoom() {
           ? "Secili mikrofon ile local stream aciliyor"
           : "Varsayilan mikrofon ile local stream aciliyor"
       );
-      stream = await navigator.mediaDevices.getUserMedia({
+      rawStream = await navigator.mediaDevices.getUserMedia({
         audio: createAudioConstraints(targetDeviceId)
       });
     } catch (error) {
@@ -753,12 +848,19 @@ export function useVoiceRoom() {
 
       await new Promise((resolve) => window.setTimeout(resolve, 120));
 
-      stream = await navigator.mediaDevices.getUserMedia({
+      rawStream = await navigator.mediaDevices.getUserMedia({
         audio: createAudioConstraints()
       });
     }
 
     addDiagnosticLog("Local mikrofon stream'i hazir");
+
+    rawLocalStreamRef.current = rawStream;
+    microphoneProcessorRef.current = createMicrophoneProcessor({
+      stream: rawStream,
+      thresholdPercent: inputSensitivityRef.current
+    });
+    const stream = microphoneProcessorRef.current.stream;
 
     const [track] = stream.getAudioTracks();
     if (track) {
@@ -767,7 +869,7 @@ export function useVoiceRoom() {
 
     localStreamRef.current = stream;
     await refreshDevices();
-    startSpeakingMonitor(stream);
+    startSpeakingMonitor(rawStream);
     return stream;
   }
 
@@ -826,7 +928,7 @@ export function useVoiceRoom() {
       return existing;
     }
 
-    const peer = new RTCPeerConnection(RTC_CONFIG);
+    const peer = new RTCPeerConnection(rtcConfigurationRef.current);
     peersRef.current.set(remoteUserId, peer);
 
     const stream = localStreamRef.current;
@@ -834,6 +936,14 @@ export function useVoiceRoom() {
       for (const track of stream.getTracks()) {
         peer.addTrack(track, stream);
       }
+    }
+
+    const localScreenStream = localScreenStreamRef.current;
+    if (localScreenStream) {
+      const screenSenders = localScreenStream
+        .getTracks()
+        .map((track) => peer.addTrack(track, localScreenStream));
+      screenSendersRef.current.set(remoteUserId, screenSenders);
     }
 
     peer.onicecandidate = (event) => {
@@ -850,6 +960,20 @@ export function useVoiceRoom() {
     peer.ontrack = (event) => {
       const [stream] = event.streams;
       if (!stream) {
+        return;
+      }
+
+      if (event.track.kind === "video") {
+        remoteVideoStreamsRef.current.set(remoteUserId, stream);
+
+        if (selectedScreenShareOwnerId === remoteUserId) {
+          const remoteScreenUser = roomUsers.find(
+            (user) => user.id === remoteUserId && user.screenSharing
+          );
+          setSharedScreenOwnerId(remoteUserId);
+          setSharedScreenOwnerTag(remoteScreenUser?.tag || "");
+          setSharedScreenStream(stream);
+        }
         return;
       }
 
@@ -899,7 +1023,6 @@ export function useVoiceRoom() {
   }
 
   async function createOffer(remoteUserId: string) {
-    await ensureLocalStream();
     const peer = createPeerConnection(remoteUserId);
     const offer = await peer.createOffer();
     await peer.setLocalDescription(offer);
@@ -908,6 +1031,27 @@ export function useVoiceRoom() {
       to: remoteUserId,
       sdp: offer
     });
+  }
+
+  async function renegotiatePeer(remoteUserId: string) {
+    const peer = peersRef.current.get(remoteUserId);
+    if (!peer || peer.signalingState !== "stable") {
+      return;
+    }
+
+    const offer = await peer.createOffer();
+    await peer.setLocalDescription(offer);
+
+    socketRef.current?.emit("webrtc-offer", {
+      to: remoteUserId,
+      sdp: offer
+    });
+  }
+
+  async function renegotiateAllPeers() {
+    for (const remoteUserId of peersRef.current.keys()) {
+      await renegotiatePeer(remoteUserId);
+    }
   }
 
   function getOrCreateAudioElement(remoteUserId: string) {
@@ -995,6 +1139,8 @@ export function useVoiceRoom() {
       peer.close();
     }
     peersRef.current.delete(remoteUserId);
+    screenSendersRef.current.delete(remoteUserId);
+    remoteVideoStreamsRef.current.delete(remoteUserId);
     remoteStreamsRef.current.delete(remoteUserId);
 
     const audioElement = audioElementsRef.current.get(remoteUserId);
@@ -1009,14 +1155,34 @@ export function useVoiceRoom() {
   async function cleanupRoomResources() {
     setIsLocallySpeaking(false);
     socketRef.current?.emit("speaking-state", false);
+    socketRef.current?.emit("screen-share-state", false);
+    patchSelfStateLocally({ screenSharing: false });
 
     for (const peerId of [...peersRef.current.keys()]) {
       destroyPeer(peerId);
     }
 
+    if (localScreenStreamRef.current) {
+      for (const track of localScreenStreamRef.current.getTracks()) {
+        track.stop();
+      }
+      localScreenStreamRef.current = null;
+    }
+
+    setIsScreenSharing(false);
+    setSelectedScreenShareOwnerId(null);
+    setSharedScreenOwnerId(null);
+    setSharedScreenOwnerTag("");
+    setSharedScreenStream(null);
+
     if (speakingMonitorRef.current) {
       await speakingMonitorRef.current.stop();
       speakingMonitorRef.current = null;
+    }
+
+    if (microphoneProcessorRef.current) {
+      await microphoneProcessorRef.current.stop();
+      microphoneProcessorRef.current = null;
     }
 
     if (localStreamRef.current) {
@@ -1025,14 +1191,19 @@ export function useVoiceRoom() {
       }
       localStreamRef.current = null;
     }
+
+    if (rawLocalStreamRef.current) {
+      for (const track of rawLocalStreamRef.current.getTracks()) {
+        track.stop();
+      }
+      rawLocalStreamRef.current = null;
+    }
   }
 
-  async function replaceInputTrack(deviceId: string) {
-    await cleanupLocalStreamOnly();
-    await ensureLocalStream(deviceId);
-
-    const newTrack = localStreamRef.current?.getAudioTracks()[0];
-    if (!newTrack) {
+  async function attachLocalTrackToPeers() {
+    const stream = localStreamRef.current;
+    const newTrack = stream?.getAudioTracks()[0];
+    if (!stream || !newTrack) {
       return;
     }
 
@@ -1041,8 +1212,46 @@ export function useVoiceRoom() {
         .getSenders()
         .find((candidateSender) => candidateSender.track?.kind === "audio");
 
-      await sender?.replaceTrack(newTrack);
+      if (sender) {
+        await sender.replaceTrack(newTrack);
+        continue;
+      }
+
+      peer.addTrack(newTrack, stream);
     }
+  }
+
+  async function attachScreenTracksToPeers(stream: MediaStream) {
+    for (const [remoteUserId, peer] of peersRef.current.entries()) {
+      const senders = stream.getTracks().map((track) => peer.addTrack(track, stream));
+      screenSendersRef.current.set(remoteUserId, senders);
+    }
+
+    await renegotiateAllPeers();
+  }
+
+  async function removeScreenTracksFromPeers() {
+    for (const [remoteUserId, peer] of peersRef.current.entries()) {
+      const senders = screenSendersRef.current.get(remoteUserId) || [];
+
+      for (const sender of senders) {
+        try {
+          peer.removeTrack(sender);
+        } catch (error) {
+          console.error("[screen-share] failed to remove sender", error);
+        }
+      }
+
+      screenSendersRef.current.delete(remoteUserId);
+    }
+
+    await renegotiateAllPeers();
+  }
+
+  async function replaceInputTrack(deviceId: string) {
+    await cleanupLocalStreamOnly();
+    await ensureLocalStream(deviceId);
+    await attachLocalTrackToPeers();
   }
 
   async function cleanupLocalStreamOnly() {
@@ -1057,6 +1266,18 @@ export function useVoiceRoom() {
         track.stop();
       }
       localStreamRef.current = null;
+    }
+
+    if (microphoneProcessorRef.current) {
+      await microphoneProcessorRef.current.stop();
+      microphoneProcessorRef.current = null;
+    }
+
+    if (rawLocalStreamRef.current) {
+      for (const track of rawLocalStreamRef.current.getTracks()) {
+        track.stop();
+      }
+      rawLocalStreamRef.current = null;
     }
   }
 
@@ -1086,10 +1307,31 @@ export function useVoiceRoom() {
       setCanOpenMicrophoneSettings(false);
       addDiagnosticLog(`Odaya katilma denemesi: ${roomId}`);
       await waitForSocketConnection();
-      await ensureLocalStream();
+      await ensureRtcConfiguration();
+      let joinedAsListener = false;
+
+      try {
+        await ensureLocalStream();
+      } catch (micError) {
+        joinedAsListener = true;
+        micEnabledRef.current = false;
+        setIsMicEnabled(false);
+        patchSelfStateLocally({ micEnabled: false });
+
+        const friendlyError = getFriendlyMicrophoneError(micError);
+        const micErrorMessage =
+          micError instanceof Error ? micError.message : "Bilinmeyen mikrofon hatasi";
+        addDiagnosticLog(`Mikrofon acilamadi, dinleyici moduna gecildi: ${micErrorMessage}`);
+        setError(
+          friendlyError?.message ||
+            "Mikrofon acilamadi ama dinleyici olarak odaya baglandin. Dilersen sonra mikrofonu tekrar acabilirsin."
+        );
+        setCanOpenMicrophoneSettings(Boolean(friendlyError?.canOpenSettings));
+      }
+
       addDiagnosticLog(`join-room emit edildi: ${roomId}`);
       socketRef.current?.emit("join-room", roomId);
-      socketRef.current?.emit("mic-state", isMicEnabled);
+      socketRef.current?.emit("mic-state", joinedAsListener ? false : isMicEnabled);
       socketRef.current?.emit("audio-output-state", isOutputEnabled);
       setCurrentRoomId(roomId);
       addDiagnosticLog(`Aktif oda secildi: ${roomId}`);
@@ -1131,6 +1373,23 @@ export function useVoiceRoom() {
 
   async function toggleMic() {
     const nextValue = !isMicEnabled;
+
+    if (nextValue && !localStreamRef.current) {
+      try {
+        await ensureLocalStream();
+        await attachLocalTrackToPeers();
+      } catch (micError) {
+        console.error(micError);
+        const friendlyError = getFriendlyMicrophoneError(micError);
+        setError(
+          friendlyError?.message ||
+            "Mikrofon acilamadi. Mikrofonunu kontrol edip tekrar dene."
+        );
+        setCanOpenMicrophoneSettings(Boolean(friendlyError?.canOpenSettings));
+        return;
+      }
+    }
+
     micEnabledRef.current = nextValue;
     setIsMicEnabled(nextValue);
     applyMicTransmissionState();
@@ -1168,6 +1427,15 @@ export function useVoiceRoom() {
       deviceId ? `Output cihaz secildi: ${deviceId}` : "Varsayilan output cihaza donuldu"
     );
     await applyOutputPreferences();
+  }
+
+  function changeInputSensitivity(nextValue: number) {
+    const normalizedValue = Math.max(0, Math.min(100, nextValue));
+    setInputSensitivity(normalizedValue);
+    window.localStorage.setItem(
+      STORAGE_KEYS.inputSensitivity,
+      String(normalizedValue)
+    );
   }
 
   async function startMicTest() {
@@ -1223,6 +1491,100 @@ export function useVoiceRoom() {
     getSocket().emit("send-message", normalizedText);
   }
 
+  async function startScreenShare() {
+    if (!currentRoomId) {
+      setError("Ekran paylasimi icin once bir odaya baglanman gerekiyor.");
+      return;
+    }
+
+    try {
+      setError("");
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true
+      });
+
+      localScreenStreamRef.current = displayStream;
+      setIsScreenSharing(true);
+      setSelectedScreenShareOwnerId(socketIdRef.current || null);
+      setSharedScreenOwnerId(socketIdRef.current || null);
+      setSharedScreenOwnerTag(tagRef.current);
+      setSharedScreenStream(displayStream);
+      patchSelfStateLocally({ screenSharing: true });
+      socketRef.current?.emit("screen-share-state", true);
+      await attachScreenTracksToPeers(displayStream);
+      addDiagnosticLog("Ekran paylasimi baslatildi");
+
+      const [videoTrack] = displayStream.getVideoTracks();
+      videoTrack?.addEventListener("ended", () => {
+        void stopScreenShare();
+      });
+    } catch (error) {
+      console.error(error);
+      addDiagnosticLog("Ekran paylasimi baslatilamadi");
+      setError("Ekran paylasimi baslatilamadi. Lutfen tekrar dene.");
+    }
+  }
+
+  async function stopScreenShare() {
+    if (localScreenStreamRef.current) {
+      for (const track of localScreenStreamRef.current.getTracks()) {
+        track.stop();
+      }
+      localScreenStreamRef.current = null;
+    }
+
+    setIsScreenSharing(false);
+    patchSelfStateLocally({ screenSharing: false });
+    socketRef.current?.emit("screen-share-state", false);
+    await removeScreenTracksFromPeers();
+
+    if (selectedScreenShareOwnerId === socketIdRef.current) {
+      setSelectedScreenShareOwnerId(null);
+      setSharedScreenOwnerId(null);
+      setSharedScreenOwnerTag("");
+      setSharedScreenStream(null);
+    }
+
+    addDiagnosticLog("Ekran paylasimi durduruldu");
+  }
+
+  async function toggleScreenShare() {
+    if (isScreenSharing) {
+      await stopScreenShare();
+      return;
+    }
+
+    await startScreenShare();
+  }
+
+  function joinScreenShare(userId: string) {
+    const targetUser = connectedUsers.find(
+      (user) => user.id === userId && user.screenSharing
+    );
+    if (!targetUser) {
+      return;
+    }
+
+    setSelectedScreenShareOwnerId(targetUser.id);
+    setSharedScreenOwnerId(targetUser.id);
+    setSharedScreenOwnerTag(targetUser.tag);
+
+    if (targetUser.id === socketIdRef.current && localScreenStreamRef.current) {
+      setSharedScreenStream(localScreenStreamRef.current);
+      return;
+    }
+
+    setSharedScreenStream(remoteVideoStreamsRef.current.get(targetUser.id) || null);
+  }
+
+  function closeScreenShareView() {
+    setSelectedScreenShareOwnerId(null);
+    setSharedScreenOwnerId(null);
+    setSharedScreenOwnerTag("");
+    setSharedScreenStream(null);
+  }
+
   useEffect(() => {
     const handleDeviceChange = () => {
       void refreshDevices();
@@ -1262,6 +1624,12 @@ export function useVoiceRoom() {
     socketStatus,
     chatMessages,
     remoteUserVolumes,
+    isScreenSharing,
+    selectedScreenShareOwnerId,
+    sharedScreenOwnerId,
+    sharedScreenOwnerTag,
+    sharedScreenStream,
+    inputSensitivity,
     selectedInputDeviceId,
     selectedOutputDeviceId,
     setTagState,
@@ -1273,6 +1641,10 @@ export function useVoiceRoom() {
     updateTag,
     changeInputDevice,
     changeOutputDevice,
+    changeInputSensitivity,
+    toggleScreenShare,
+    joinScreenShare,
+    closeScreenShareView,
     openMicrophoneSettings,
     startMicTest,
     stopMicTest,

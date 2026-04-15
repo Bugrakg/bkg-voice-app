@@ -7,6 +7,7 @@ import {
   HeadphoneOffIcon,
   MicIcon,
   MicOffIcon,
+  ScreenShareIcon,
   SettingsIcon
 } from "./icons/AppIcons";
 import { UserRow } from "./UserRow";
@@ -23,6 +24,7 @@ type VoiceSidebarProps = {
   tag: string;
   isMicEnabled: boolean;
   isOutputEnabled: boolean;
+  isScreenSharing: boolean;
   isPushToTalkActive: boolean;
   pushToTalkKey: string;
   voiceMode: VoiceMode;
@@ -33,6 +35,8 @@ type VoiceSidebarProps = {
   onJoinRoom: (room: string) => void | Promise<void>;
   onToggleMic: () => void | Promise<void>;
   onToggleOutput: () => void | Promise<void>;
+  onToggleScreenShare: () => void | Promise<void>;
+  onJoinScreenShare: (userId: string) => void;
   onOpenSettings: () => void;
   onOpenMicrophoneSettings: () => void | Promise<void>;
   onLeaveRoom: () => void | Promise<void>;
@@ -51,6 +55,7 @@ export function VoiceSidebar({
   tag,
   isMicEnabled,
   isOutputEnabled,
+  isScreenSharing,
   isPushToTalkActive,
   pushToTalkKey,
   voiceMode,
@@ -61,6 +66,8 @@ export function VoiceSidebar({
   onJoinRoom,
   onToggleMic,
   onToggleOutput,
+  onToggleScreenShare,
+  onJoinScreenShare,
   onOpenSettings,
   onOpenMicrophoneSettings,
   onLeaveRoom,
@@ -144,6 +151,9 @@ export function VoiceSidebar({
                       key={user.id}
                       user={user}
                       isSelf={user.id === socketId}
+                      onJoinScreenShare={
+                        user.screenSharing ? () => onJoinScreenShare(user.id) : undefined
+                      }
                       onContextMenu={
                         user.id === socketId
                           ? undefined
@@ -195,6 +205,14 @@ export function VoiceSidebar({
             danger={!isOutputEnabled}
           >
             {isOutputEnabled ? <HeadphoneIcon /> : <HeadphoneOffIcon />}
+          </IconButton>
+
+          <IconButton
+            label={isScreenSharing ? "Ekran paylasimini durdur" : "Ekran paylas"}
+            onClick={onToggleScreenShare}
+            danger={isScreenSharing}
+          >
+            <ScreenShareIcon />
           </IconButton>
 
           <IconButton label="Ayarlar" onClick={onOpenSettings}>

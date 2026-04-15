@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { GlobalChatPanel } from "./components/GlobalChatPanel";
 import { LoginScreen } from "./components/LoginScreen";
+import { ScreenSharePanel } from "./components/ScreenSharePanel";
 import { SettingsModal } from "./components/SettingsModal";
 import { VoiceSidebar } from "./components/VoiceSidebar";
 import { useVoiceRoom } from "./hooks/useVoiceRoom";
@@ -15,10 +16,12 @@ export default function App() {
     error,
     hasEntered,
     inputDevices,
+    inputSensitivity,
     isJoining,
     isLocallySpeaking,
     isMicEnabled,
     isOutputEnabled,
+    isScreenSharing,
     isPushToTalkActive,
     pushToTalkKey,
     voiceMode,
@@ -31,6 +34,7 @@ export default function App() {
     socketStatus,
     chatMessages,
     remoteUserVolumes,
+    selectedScreenShareOwnerId,
     selectedInputDeviceId,
     selectedOutputDeviceId,
     setTagState,
@@ -42,25 +46,53 @@ export default function App() {
     updateTag,
     changeInputDevice,
     changeOutputDevice,
+    changeInputSensitivity,
     openMicrophoneSettings,
+    sharedScreenOwnerId,
+    sharedScreenOwnerTag,
+    sharedScreenStream,
     startMicTest,
     stopMicTest,
     setRemoteUserVolume,
     toggleRemoteUserMute,
     changeVoiceMode,
     changePushToTalkKey,
-    sendChatMessage
+    sendChatMessage,
+    toggleScreenShare,
+    joinScreenShare,
+    closeScreenShareView
   } = useVoiceRoom();
 
   const [loginTag, setLoginTag] = useState(tag);
   const [editableTag, setEditableTag] = useState(tag);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [activePanel, setActivePanel] = useState<"chat" | "screen">("chat");
   const outputTestAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const roomSummary = useMemo(
     () => (currentRoomId ? `${connectedUsers.length} kisi bagli` : ""),
     [connectedUsers.length, currentRoomId]
   );
+  const activeScreenUsers = useMemo(
+    () => connectedUsers.filter((user) => user.screenSharing),
+    [connectedUsers]
+  );
+  const hasVisibleScreenShare =
+    isScreenSharing || activeScreenUsers.length > 0 || Boolean(sharedScreenStream);
+  const screenTabLabel =
+    sharedScreenOwnerTag || activeScreenUsers[0]?.tag || (isScreenSharing ? "Yayin" : "");
+
+  const openActiveScreenPanel = () => {
+    const preferredScreenUser =
+      activeScreenUsers.find((user) => user.id === socketId && user.screenSharing) ||
+      activeScreenUsers[0];
+
+    if (preferredScreenUser) {
+      joinScreenShare(preferredScreenUser.id);
+    }
+
+    setActivePanel("screen");
+  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -72,6 +104,12 @@ export default function App() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (!selectedScreenShareOwnerId && !isScreenSharing && activePanel === "screen") {
+      setActivePanel("chat");
+    }
+  }, [activePanel, isScreenSharing, selectedScreenShareOwnerId]);
 
   useEffect(() => {
     if (!isSettingsOpen) {
@@ -162,6 +200,7 @@ export default function App() {
         tag={tag}
         isMicEnabled={isMicEnabled}
         isOutputEnabled={isOutputEnabled}
+        isScreenSharing={isScreenSharing}
         isPushToTalkActive={isPushToTalkActive}
         pushToTalkKey={pushToTalkKey}
         voiceMode={voiceMode}
@@ -172,6 +211,16 @@ export default function App() {
         onJoinRoom={joinRoom}
         onToggleMic={toggleMic}
         onToggleOutput={toggleOutput}
+        onToggleScreenShare={async () => {
+          if (!isScreenSharing) {
+            openActiveScreenPanel();
+          }
+          await toggleScreenShare();
+        }}
+        onJoinScreenShare={(userId) => {
+          joinScreenShare(userId);
+          setActivePanel("screen");
+        }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenMicrophoneSettings={openMicrophoneSettings}
         onLeaveRoom={leaveRoom}
@@ -179,10 +228,43 @@ export default function App() {
         onToggleRemoteUserMute={toggleRemoteUserMute}
       />
 
-      <GlobalChatPanel
-        messages={chatMessages}
-        onSendMessage={sendChatMessage}
-      />
+      <section className="content-panel">
+        <div className="content-panel__tabs">
+          <button
+            type="button"
+            className={`content-panel__tab ${activePanel === "chat" ? "content-panel__tab--active" : ""}`}
+            onClick={() => {
+              setActivePanel("chat");
+              closeScreenShareView();
+            }}
+          >
+            Genel Chat
+          </button>
+          {hasVisibleScreenShare ? (
+            <button
+              type="button"
+              className={`content-panel__tab ${activePanel === "screen" ? "content-panel__tab--active" : ""}`}
+              onClick={openActiveScreenPanel}
+            >
+              {screenTabLabel ? `${screenTabLabel} yayini` : "Yayin"}
+            </button>
+          ) : null}
+        </div>
+
+        {activePanel === "screen" && sharedScreenStream && sharedScreenOwnerTag ? (
+          <ScreenSharePanel
+            stream={sharedScreenStream}
+            ownerTag={sharedScreenOwnerTag}
+            isSelf={sharedScreenOwnerId === socketId}
+            onStopSharing={sharedScreenOwnerId === socketId ? toggleScreenShare : undefined}
+          />
+        ) : (
+          <GlobalChatPanel
+            messages={chatMessages}
+            onSendMessage={sendChatMessage}
+          />
+        )}
+      </section>
 
       {isSettingsOpen ? (
         <SettingsModal
@@ -191,6 +273,7 @@ export default function App() {
           selectedOutputDeviceId={selectedOutputDeviceId}
           inputDevices={inputDevices}
           outputDevices={outputDevices}
+          inputSensitivity={inputSensitivity}
           supportsOutputRouting={supportsOutputRouting}
           isLocallySpeaking={isLocallySpeaking}
           isPushToTalkActive={isPushToTalkActive}
@@ -207,6 +290,7 @@ export default function App() {
           onTestOutput={playOutputTest}
           onChangeVoiceMode={changeVoiceMode}
           onChangePushToTalkKey={changePushToTalkKey}
+          onChangeInputSensitivity={changeInputSensitivity}
         />
       ) : null}
     </main>

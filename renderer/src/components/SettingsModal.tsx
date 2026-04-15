@@ -8,6 +8,7 @@ type SettingsModalProps = {
   selectedOutputDeviceId: string;
   inputDevices: DeviceOption[];
   outputDevices: DeviceOption[];
+  inputSensitivity: number;
   supportsOutputRouting: boolean;
   isLocallySpeaking: boolean;
   isPushToTalkActive: boolean;
@@ -24,6 +25,7 @@ type SettingsModalProps = {
   onTestOutput: () => void | Promise<void>;
   onChangeVoiceMode: (value: VoiceMode) => void;
   onChangePushToTalkKey: (value: string) => void;
+  onChangeInputSensitivity: (value: number) => void;
 };
 
 function keyboardEventToShortcut(event: KeyboardEvent) {
@@ -63,6 +65,7 @@ export function SettingsModal({
   selectedOutputDeviceId,
   inputDevices,
   outputDevices,
+  inputSensitivity,
   supportsOutputRouting,
   isLocallySpeaking,
   isPushToTalkActive,
@@ -78,7 +81,8 @@ export function SettingsModal({
   onChangeOutput,
   onTestOutput,
   onChangeVoiceMode,
-  onChangePushToTalkKey
+  onChangePushToTalkKey,
+  onChangeInputSensitivity
 }: SettingsModalProps) {
   const [isListeningForShortcut, setIsListeningForShortcut] = useState(false);
 
@@ -179,6 +183,25 @@ export function SettingsModal({
               ))}
             </select>
           </label>
+
+          <section className="settings-field">
+            <span>Giris Hassasiyeti</span>
+            <div className="settings-slider">
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value={inputSensitivity}
+                onChange={(event) => onChangeInputSensitivity(Number(event.target.value))}
+              />
+              <strong>%{inputSensitivity}</strong>
+            </div>
+            <p className="muted settings-note">
+              Dusuk seviyedeki nefes ve klavye seslerini bastirmak icin mikrofon esigini
+              yukseltebilirsin. `0` kapali, yuksek deger daha sert filtre demek.
+            </p>
+          </section>
 
           <section className="settings-field">
             <span>Konusma Modu</span>

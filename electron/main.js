@@ -17,6 +17,35 @@ let keydownListener = null;
 let keyupListener = null;
 let hasShownUpdateDialog = false;
 
+function loadUiohookModule() {
+  try {
+    const loadedModule = require("uiohook-napi");
+    sendPushToTalkDebug("uiohook-napi standart yoldan yuklendi");
+    return loadedModule;
+  } catch (primaryError) {
+    const unpackedModulePath = path.join(
+      process.resourcesPath || "",
+      "app.asar.unpacked",
+      "node_modules",
+      "uiohook-napi"
+    );
+
+    try {
+      const loadedModule = require(unpackedModulePath);
+      sendPushToTalkDebug("uiohook-napi unpacked yoldan yuklendi");
+      return loadedModule;
+    } catch (fallbackError) {
+      console.error("[ptt] uiohook-napi could not be loaded.", {
+        primaryError,
+        fallbackError,
+        unpackedModulePath
+      });
+      sendPushToTalkDebug("uiohook-napi yuklenemedi");
+      return null;
+    }
+  }
+}
+
 function sendPushToTalkDebug(message) {
   if (!mainWindow || mainWindow.isDestroyed()) {
     return;
@@ -150,13 +179,12 @@ function teardownPushToTalkListeners() {
 function setupPushToTalkListeners() {
   teardownPushToTalkListeners();
 
-  try {
-    ({ uIOhook, UiohookKey } = require("uiohook-napi"));
-  } catch (error) {
-    console.error("[ptt] uiohook-napi could not be loaded.", error);
-    sendPushToTalkDebug("uiohook-napi yuklenemedi");
+  const uiohookModule = loadUiohookModule();
+  if (!uiohookModule) {
     return false;
   }
+
+  ({ uIOhook, UiohookKey } = uiohookModule);
 
   pushToTalkKeycode = getPushToTalkKeycode(pushToTalkShortcut);
 
@@ -188,8 +216,33 @@ function setupPushToTalkListeners() {
 
   uIOhook.on("keydown", keydownListener);
   uIOhook.on("keyup", keyupListener);
-  uIOhook.start();
-  uiohookStarted = true;
+  try {
+    const startResult = uIOhook.start();
+
+    if (startResult && typeof startResult.then === "function") {
+      void startResult
+        .then(() => {
+          uiohookStarted = true;
+          logPtt("listener started", {
+            shortcut: pushToTalkShortcut,
+            keycode: pushToTalkKeycode
+          });
+        })
+        .catch((error) => {
+          console.error("[ptt] uiohook-napi could not start.", error);
+          sendPushToTalkDebug("PTT erisilebilirlik izni olmadigi icin baslatilamadi");
+        });
+
+      return true;
+    }
+
+    uiohookStarted = true;
+  } catch (error) {
+    console.error("[ptt] uiohook-napi start failed.", error);
+    sendPushToTalkDebug("PTT erisilebilirlik izni olmadigi icin baslatilamadi");
+    return false;
+  }
+
   logPtt("listener started", {
     shortcut: pushToTalkShortcut,
     keycode: pushToTalkKeycode

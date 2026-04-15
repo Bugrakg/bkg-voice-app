@@ -7,6 +7,7 @@ export type RoomUser = {
   micEnabled: boolean;
   audioOutputEnabled: boolean;
   speaking: boolean;
+  screenSharing: boolean;
 };
 
 export type DeviceOption = {
