@@ -103,6 +103,7 @@ export function createMicrophoneProcessor({
   if (!AudioContextClass) {
     return {
       stream,
+      setMuted() {},
       setThresholdPercent() {},
       async stop() {}
     };
@@ -116,6 +117,7 @@ export function createMicrophoneProcessor({
   const sampleBuffer = new Uint8Array(512);
   let activeThresholdPercent = thresholdPercent;
   let holdUntil = 0;
+  let muted = false;
 
   analyser.fftSize = 512;
   gainNode.gain.value = 1;
@@ -125,6 +127,11 @@ export function createMicrophoneProcessor({
   gainNode.connect(destination);
 
   const timer = window.setInterval(() => {
+    if (muted) {
+      gainNode.gain.setTargetAtTime(0.00001, context.currentTime, 0.008);
+      return;
+    }
+
     const gateThreshold = getGateThreshold(activeThresholdPercent);
 
     if (gateThreshold <= 0) {
@@ -150,6 +157,10 @@ export function createMicrophoneProcessor({
 
   return {
     stream: destination.stream,
+    setMuted(nextMuted: boolean) {
+      muted = nextMuted;
+      gainNode.gain.setTargetAtTime(nextMuted ? 0.00001 : 1, context.currentTime, 0.01);
+    },
     setThresholdPercent(nextThresholdPercent: number) {
       activeThresholdPercent = nextThresholdPercent;
     },

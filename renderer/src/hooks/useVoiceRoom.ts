@@ -480,7 +480,7 @@ export function useVoiceRoom() {
   }, [connectedUsers, selectedScreenShareOwnerId]);
 
   function shouldTransmitMic() {
-    if (!isMicEnabled) {
+    if (!micEnabledRef.current) {
       return false;
     }
 
@@ -492,6 +492,8 @@ export function useVoiceRoom() {
   }
 
   function applyMicTransmissionState() {
+    microphoneProcessorRef.current?.setMuted(!shouldTransmitMic());
+
     const track = localStreamRef.current?.getAudioTracks()[0];
     if (track) {
       track.enabled = shouldTransmitMic();
@@ -880,7 +882,7 @@ export function useVoiceRoom() {
       stream,
       onSpeakingChange: (speaking) => {
         setIsLocallySpeaking(speaking);
-        socketRef.current?.emit("speaking-state", speaking);
+        socketRef.current?.emit("speaking-state", shouldTransmitMic() ? speaking : false);
       }
     });
   }
@@ -1308,6 +1310,14 @@ export function useVoiceRoom() {
       addDiagnosticLog(`Odaya katilma denemesi: ${roomId}`);
       await waitForSocketConnection();
       await ensureRtcConfiguration();
+
+      if (currentRoomId && currentRoomId !== roomId) {
+        addDiagnosticLog(`Oda degisimi hazirlaniyor: ${currentRoomId} -> ${roomId}`);
+        socketRef.current?.emit("leave-room");
+        await cleanupRoomResources();
+        setRoomUsers([]);
+      }
+
       let joinedAsListener = false;
 
       try {
@@ -1357,6 +1367,7 @@ export function useVoiceRoom() {
     socketRef.current?.emit("leave-room");
     setCurrentRoomId(null);
     setRoomUsers([]);
+    closeScreenShareView();
     await cleanupRoomResources();
   }
 
@@ -1393,6 +1404,8 @@ export function useVoiceRoom() {
     micEnabledRef.current = nextValue;
     setIsMicEnabled(nextValue);
     applyMicTransmissionState();
+    setIsLocallySpeaking(false);
+    socketRef.current?.emit("speaking-state", false);
     patchSelfStateLocally({ micEnabled: nextValue });
     socketRef.current?.emit("mic-state", nextValue);
   }
@@ -1401,6 +1414,18 @@ export function useVoiceRoom() {
     const nextValue = !isOutputEnabled;
     outputEnabledRef.current = nextValue;
     setIsOutputEnabled(nextValue);
+
+    if (!nextValue && micEnabledRef.current) {
+      micEnabledRef.current = false;
+      setIsMicEnabled(false);
+      applyMicTransmissionState();
+      setIsLocallySpeaking(false);
+      socketRef.current?.emit("speaking-state", false);
+      patchSelfStateLocally({ micEnabled: false });
+      socketRef.current?.emit("mic-state", false);
+      addDiagnosticLog("Ses kapatildigi icin mikrofon da kapatildi");
+    }
+
     await applyOutputPreferences();
     patchSelfStateLocally({ audioOutputEnabled: nextValue });
     socketRef.current?.emit("audio-output-state", nextValue);
