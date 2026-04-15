@@ -1,5 +1,13 @@
 const path = require("path");
-const { app, BrowserWindow, dialog, ipcMain, Menu, shell } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  desktopCapturer,
+  dialog,
+  ipcMain,
+  Menu,
+  shell
+} = require("electron");
 const { autoUpdater } = require("electron-updater");
 const packageJson = require("../package.json");
 
@@ -16,6 +24,7 @@ let uiohookStarted = false;
 let keydownListener = null;
 let keyupListener = null;
 let hasShownUpdateDialog = false;
+let pendingDisplaySourceId = null;
 let currentUpdaterState = {
   visible: false,
   status: "idle",
@@ -113,6 +122,49 @@ function createMainWindow() {
   });
 
   mainWindow = window;
+  window.webContents.session.setDisplayMediaRequestHandler(
+    async (request, callback) => {
+      try {
+        const sources = await desktopCapturer.getSources({
+          types: ["screen", "window"],
+          thumbnailSize: {
+            width: 640,
+            height: 360
+          },
+          fetchWindowIcons: true
+        });
+        const selectedSource =
+          sources.find((source) => source.id === pendingDisplaySourceId) ||
+          sources.find((source) => source.id.startsWith("screen:")) ||
+          sources[0];
+
+        if (!selectedSource) {
+          console.error("[screen-share] no display source found");
+          callback({ video: null, audio: false });
+          return;
+        }
+
+        console.log("[screen-share] source selected", {
+          sourceId: selectedSource.id,
+          name: selectedSource.name
+        });
+
+        callback({
+          video: selectedSource,
+          audio:
+            process.platform === "win32" && request.audioRequested
+              ? "loopback"
+              : false
+        });
+      } catch (error) {
+        console.error("[screen-share] display media request failed", error);
+        callback({ video: null, audio: false });
+      } finally {
+        pendingDisplaySourceId = null;
+      }
+    },
+    { useSystemPicker: false }
+  );
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//i.test(url)) {
       void shell.openExternal(url);
@@ -151,6 +203,7 @@ function sendPushToTalkEvent(channel) {
     return;
   }
 
+  logPtt(`renderer'a ${channel} gonderildi`);
   mainWindow.webContents.send(channel);
 }
 
@@ -201,7 +254,7 @@ function teardownPushToTalkListeners() {
   }
 }
 
-function setupPushToTalkListeners() {
+async function setupPushToTalkListeners() {
   teardownPushToTalkListeners();
 
   const uiohookModule = loadUiohookModule();
@@ -245,19 +298,12 @@ function setupPushToTalkListeners() {
     const startResult = uIOhook.start();
 
     if (startResult && typeof startResult.then === "function") {
-      void startResult
-        .then(() => {
-          uiohookStarted = true;
-          logPtt("listener started", {
-            shortcut: pushToTalkShortcut,
-            keycode: pushToTalkKeycode
-          });
-        })
-        .catch((error) => {
-          console.error("[ptt] uiohook-napi could not start.", error);
-          sendPushToTalkDebug("PTT erisilebilirlik izni olmadigi icin baslatilamadi");
-        });
-
+      await startResult;
+      uiohookStarted = true;
+      logPtt("listener started", {
+        shortcut: pushToTalkShortcut,
+        keycode: pushToTalkKeycode
+      });
       return true;
     }
 
@@ -435,9 +481,9 @@ function setupAutoUpdates() {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createMainWindow();
-  setupPushToTalkListeners();
+  await setupPushToTalkListeners();
   setupAutoUpdates();
 
   app.on("activate", () => {
@@ -447,13 +493,13 @@ app.whenReady().then(() => {
   });
 });
 
-ipcMain.handle("set-push-to-talk-shortcut", (_event, shortcut) => {
+ipcMain.handle("set-push-to-talk-shortcut", async (_event, shortcut) => {
   pushToTalkShortcut = normalizeShortcut(shortcut);
   pushToTalkKeycode = null;
   isPushToTalkPressed = false;
   sendPushToTalkEvent("ptt-up");
 
-  const ok = setupPushToTalkListeners();
+  const ok = await setupPushToTalkListeners();
   return {
     ok,
     shortcut: pushToTalkShortcut
@@ -484,6 +530,43 @@ ipcMain.handle("open-external-url", async (_event, url) => {
     console.error("[shell] failed to open external url", error);
     return false;
   }
+});
+
+ipcMain.handle("list-display-sources", async () => {
+  try {
+    const sources = await desktopCapturer.getSources({
+      types: ["screen", "window"],
+      thumbnailSize: {
+        width: 640,
+        height: 360
+      },
+      fetchWindowIcons: true
+    });
+
+    return sources.map((source) => ({
+      id: source.id,
+      name: source.name,
+      kind: source.id.startsWith("screen:") ? "screen" : "window",
+      thumbnailDataUrl: source.thumbnail.isEmpty()
+        ? ""
+        : source.thumbnail.toDataURL(),
+      appIconDataUrl: source.appIcon?.isEmpty?.() ? "" : source.appIcon?.toDataURL?.() || ""
+    }));
+  } catch (error) {
+    console.error("[screen-share] failed to list display sources", error);
+    return [];
+  }
+});
+
+ipcMain.handle("select-display-source", (_event, sourceId) => {
+  if (typeof sourceId !== "string" || !sourceId.trim()) {
+    pendingDisplaySourceId = null;
+    return false;
+  }
+
+  pendingDisplaySourceId = sourceId;
+  console.log("[screen-share] pending source stored", sourceId);
+  return true;
 });
 
 app.on("window-all-closed", () => {

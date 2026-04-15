@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { DisplaySourcePicker } from "./components/DisplaySourcePicker";
 import { GlobalChatPanel } from "./components/GlobalChatPanel";
 import { LoginScreen } from "./components/LoginScreen";
 import { ScreenSharePanel } from "./components/ScreenSharePanel";
@@ -6,7 +7,7 @@ import { SettingsModal } from "./components/SettingsModal";
 import { UpdaterStatusCard } from "./components/UpdaterStatusCard";
 import { VoiceSidebar } from "./components/VoiceSidebar";
 import { useVoiceRoom } from "./hooks/useVoiceRoom";
-import type { UpdaterState } from "./types";
+import type { DisplaySource, UpdaterState } from "./types";
 
 const INITIAL_UPDATER_STATE: UpdaterState = {
   visible: false,
@@ -71,6 +72,7 @@ export default function App() {
     changePushToTalkKey,
     sendChatMessage,
     toggleScreenShare,
+    startScreenShareWithSource,
     joinScreenShare,
     closeScreenShareView
   } = useVoiceRoom();
@@ -80,6 +82,10 @@ export default function App() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activePanel, setActivePanel] = useState<"chat" | "screen">("chat");
   const [updaterState, setUpdaterState] = useState<UpdaterState>(INITIAL_UPDATER_STATE);
+  const [displaySources, setDisplaySources] = useState<DisplaySource[]>([]);
+  const [displayPickerError, setDisplayPickerError] = useState("");
+  const [isDisplayPickerOpen, setIsDisplayPickerOpen] = useState(false);
+  const [isDisplayPickerLoading, setIsDisplayPickerLoading] = useState(false);
   const outputTestAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const roomSummary = useMemo(
@@ -114,6 +120,47 @@ export default function App() {
   const leaveScreenShareView = () => {
     closeScreenShareView();
     setActivePanel("chat");
+  };
+
+  const openDisplayPicker = async () => {
+    if (!window.voiceApp?.listDisplaySources) {
+      openActiveScreenPanel();
+      await toggleScreenShare();
+      return;
+    }
+
+    setDisplayPickerError("");
+    setIsDisplayPickerLoading(true);
+    setIsDisplayPickerOpen(true);
+
+    try {
+      const sources = await window.voiceApp.listDisplaySources();
+      setDisplaySources(sources);
+
+      if (!sources.length) {
+        setDisplayPickerError("Paylasilabilir ekran veya pencere bulunamadi.");
+      }
+    } catch (error) {
+      console.error(error);
+      setDisplayPickerError(
+        "Ekran paylasimi kaynaklari yuklenemedi. Lutfen tekrar dene."
+      );
+    } finally {
+      setIsDisplayPickerLoading(false);
+    }
+  };
+
+  const closeDisplayPicker = () => {
+    setIsDisplayPickerOpen(false);
+    setIsDisplayPickerLoading(false);
+    setDisplayPickerError("");
+    setDisplaySources([]);
+  };
+
+  const handleDisplaySourceSelect = async (sourceId: string) => {
+    openActiveScreenPanel();
+    closeDisplayPicker();
+    await startScreenShareWithSource(sourceId);
   };
 
   useEffect(() => {
@@ -271,10 +318,12 @@ export default function App() {
         onToggleMic={toggleMic}
         onToggleOutput={toggleOutput}
         onToggleScreenShare={async () => {
-          if (!isScreenSharing) {
-            openActiveScreenPanel();
+          if (isScreenSharing) {
+            await toggleScreenShare();
+            return;
           }
-          await toggleScreenShare();
+
+          await openDisplayPicker();
         }}
         onJoinScreenShare={(userId) => {
           joinScreenShare(userId);
@@ -328,6 +377,16 @@ export default function App() {
           onChangeVoiceMode={changeVoiceMode}
           onChangePushToTalkKey={changePushToTalkKey}
           onChangeInputSensitivity={changeInputSensitivity}
+          />
+        ) : null}
+
+        {isDisplayPickerOpen ? (
+          <DisplaySourcePicker
+            sources={displaySources}
+            isLoading={isDisplayPickerLoading}
+            error={displayPickerError}
+            onClose={closeDisplayPicker}
+            onSelect={handleDisplaySourceSelect}
           />
         ) : null}
       </main>

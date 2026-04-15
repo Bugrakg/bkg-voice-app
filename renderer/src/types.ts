@@ -55,6 +55,14 @@ export type UpdaterState = {
   version: string;
 };
 
+export type DisplaySource = {
+  id: string;
+  name: string;
+  kind: "screen" | "window";
+  thumbnailDataUrl: string;
+  appIconDataUrl: string;
+};
+
 declare global {
   interface Window {
     voiceApp?: {
@@ -74,6 +82,8 @@ declare global {
       getUpdaterState?: () => Promise<UpdaterState>;
       onUpdaterState?: (callback: (state: UpdaterState) => void) => () => void;
       openExternalUrl?: (url: string) => Promise<boolean>;
+      listDisplaySources?: () => Promise<DisplaySource[]>;
+      selectDisplaySource?: (sourceId: string) => Promise<boolean>;
       onPushToTalkDebug?: (callback: (message: string) => void) => () => void;
       versions: {
         chrome: string;

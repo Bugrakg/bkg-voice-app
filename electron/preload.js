@@ -63,5 +63,11 @@ contextBridge.exposeInMainWorld("voiceApp", {
   },
   openExternalUrl(url) {
     return ipcRenderer.invoke("open-external-url", url);
+  },
+  listDisplaySources() {
+    return ipcRenderer.invoke("list-display-sources");
+  },
+  selectDisplaySource(sourceId) {
+    return ipcRenderer.invoke("select-display-source", sourceId);
   }
 });
