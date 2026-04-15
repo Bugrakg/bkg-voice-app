@@ -1,68 +1,16 @@
-export function MicIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 15a3 3 0 0 0 3-3V7a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Z" />
-      <path d="M18 11a1 1 0 1 0-2 0 4 4 0 0 1-8 0 1 1 0 1 0-2 0 6 6 0 0 0 5 5.91V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-2v-3.09A6 6 0 0 0 18 11Z" />
-    </svg>
-  );
-}
-
-export function MicOffIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M15 12V7a3 3 0 0 0-5.28-1.92l1.45 1.45A1 1 0 0 1 12 6a1 1 0 0 1 1 1v5c0 .28-.11.53-.29.71l1.45 1.45C14.68 13.61 15 12.84 15 12Z" />
-      <path d="m4.71 3.29-1.42 1.42L7 8.41V11a5 5 0 0 0 5 5c.71 0 1.39-.15 2-.41l1.74 1.74V20H9a1 1 0 1 0 0 2h6a1 1 0 1 0 0-2h-1.26v-.67l5.55 5.55 1.41-1.42Z" />
-      <path d="M18 11a1 1 0 1 0-2 0c0 .63-.15 1.22-.42 1.75l1.48 1.48A5.9 5.9 0 0 0 18 11ZM8 11V9.41l-2-2V11c0 3.04 2.27 5.56 5.2 5.95l-1.84-1.84A4 4 0 0 1 8 11Z" />
-    </svg>
-  );
-}
-
-export function HeadphoneIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 3a8 8 0 0 0-8 8v5a3 3 0 0 0 3 3h2v-7H6v-1a6 6 0 1 1 12 0v1h-3v7h2a3 3 0 0 0 3-3v-5a8 8 0 0 0-8-8Z" />
-    </svg>
-  );
-}
-
-export function HeadphoneOffIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m4.71 3.29-1.42 1.42 17 17 1.41-1.42-2.7-2.7A3 3 0 0 0 20 16v-5a8 8 0 0 0-12.07-6.9L4.71 3.3ZM18 16a1 1 0 0 1-.19.57L16 14.76V12h2v4ZM12 5a6 6 0 0 1 6 6v1h-2v-.55l-6.31-6.31c.72-.1 1.49-.14 2.31-.14Z" />
-      <path d="M10 12v7H7a3 3 0 0 1-3-3v-5c0-1.43.37-2.77 1.03-3.92L10 12Zm-4-1v5a1 1 0 0 0 1 1h1v-4.17L6.3 11.12 6 11Z" />
-    </svg>
-  );
-}
-
-export function SettingsIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="m19.14 12.94.04-.94-.04-.94 2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.4 7.4 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.49-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.57.22-1.12.53-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58-.04.94.04.94-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.4 1.05.72 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.84a.5.5 0 0 0 .49-.42l.36-2.54c.57-.22 1.12-.53 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z" />
-    </svg>
-  );
-}
-
-export function ScreenShareIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-4.5l1.7 2H18a1 1 0 1 1 0 2H6a1 1 0 1 1 0-2h2.8l1.7-2H6a2 2 0 0 1-2-2V5Zm2 0v8h12V5H6Zm6 1.5a1 1 0 0 1 1 1v1.08l1.3-1.29a1 1 0 1 1 1.4 1.42L14.42 10l1.29 1.29a1 1 0 1 1-1.42 1.42L13 11.42V12.5a1 1 0 1 1-2 0v-1.08l-1.29 1.29a1 1 0 1 1-1.42-1.42L9.58 10 8.29 8.71a1 1 0 0 1 1.42-1.42L11 8.58V7.5a1 1 0 0 1 1-1Z" />
-    </svg>
-  );
-}
-
-export function ExitIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M10 17v-2h4V9h-4V7h6v10h-6Z" />
-      <path d="M4 5h7v2H6v10h5v2H4V5Zm12.59 2.41L15.17 8.83 17.34 11H9v2h8.34l-2.17 2.17 1.42 1.42L21.17 12l-4.58-4.59Z" />
-    </svg>
-  );
-}
-
-export function CloseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.41L10.59 13.4 4.29 19.7 2.88 18.29 9.17 12 2.88 5.71 4.29 4.3l6.3 6.29 6.29-6.3 1.41 1.42Z" />
-    </svg>
-  );
-}
+export {
+  MessageSquareText as ChatChannelIcon,
+  ChevronRight as ChevronRightIcon,
+  Maximize as FullscreenIcon,
+  Headphones as HeadphoneIcon,
+  LogOut as ExitIcon,
+  Mic as MicIcon,
+  MicOff as MicOffIcon,
+  MonitorX as ScreenShareOffIcon,
+  MonitorUp as ScreenShareIcon,
+  Settings as SettingsIcon,
+  Volume2 as SharedAudioIcon,
+  VolumeX as SharedAudioOffIcon,
+  VolumeX as HeadphoneOffIcon,
+  X as CloseIcon
+} from "lucide-react";

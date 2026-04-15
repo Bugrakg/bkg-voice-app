@@ -14,20 +14,21 @@ export function UserRow({
   onContextMenu,
   onJoinScreenShare
 }: UserRowProps) {
+  const nameClassName = [
+    "user-row__name",
+    isSelf ? "user-row__name--self" : "",
+    user.speaking ? "user-row__name--speaking" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <article
       className={`user-row ${user.speaking ? "user-row--speaking" : ""}`}
       onContextMenu={onContextMenu}
     >
       <div className="user-row__main">
-        <strong>{user.tag}</strong>
-        {isSelf ? <span className="pill">Siz</span> : null}
-        {user.screenSharing ? (
-          <span className="user-row__screen-badge" title="Ekran paylasiyor">
-            <ScreenShareIcon />
-            <em>YAYIN</em>
-          </span>
-        ) : null}
+        <strong className={nameClassName}>{user.tag}</strong>
       </div>
 
       <div className="user-row__icons" aria-label="user status">

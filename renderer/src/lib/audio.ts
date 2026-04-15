@@ -63,15 +63,25 @@ export function createSpeakingMonitor({
 
   const sampleBuffer = new Uint8Array(analyser.frequencyBinCount);
   let speaking = false;
+  let smoothedRms = 0;
+  let speakingHoldUntil = 0;
   let timer = window.setInterval(() => {
     const rms = calculateRms(analyser, sampleBuffer);
-    const nextSpeaking = rms > SPEAKING_THRESHOLD;
+    smoothedRms = smoothedRms * 0.6 + rms * 0.4;
+    const now = performance.now();
+
+    if (smoothedRms >= SPEAKING_THRESHOLD) {
+      speakingHoldUntil = now + 180;
+    }
+
+    const nextSpeaking =
+      smoothedRms >= SPEAKING_THRESHOLD || now <= speakingHoldUntil;
 
     if (nextSpeaking !== speaking) {
       speaking = nextSpeaking;
       onSpeakingChange(speaking);
     }
-  }, 150);
+  }, 90);
 
   return {
     async stop() {

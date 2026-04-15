@@ -94,6 +94,15 @@ export default function App() {
     setActivePanel("screen");
   };
 
+  const openChatPanel = () => {
+    setActivePanel("chat");
+  };
+
+  const leaveScreenShareView = () => {
+    closeScreenShareView();
+    setActivePanel("chat");
+  };
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -190,6 +199,7 @@ export default function App() {
   return (
     <main className="app-shell">
       <VoiceSidebar
+        activePanel={activePanel}
         roomSummary={roomSummary}
         currentRoomId={currentRoomId}
         connectedUsers={connectedUsers}
@@ -208,7 +218,23 @@ export default function App() {
         canOpenMicrophoneSettings={canOpenMicrophoneSettings}
         supportsOutputRouting={supportsOutputRouting}
         remoteUserVolumes={remoteUserVolumes}
-        onJoinRoom={joinRoom}
+        onJoinRoom={async (room) => {
+          if (currentRoomId === room) {
+            if (selectedScreenShareOwnerId && sharedScreenStream) {
+              setActivePanel("screen");
+              return;
+            }
+
+            if (isScreenSharing || activeScreenUsers.length > 0) {
+              openActiveScreenPanel();
+              return;
+            }
+          }
+
+          setActivePanel("chat");
+          await joinRoom(room);
+        }}
+        onOpenChat={openChatPanel}
         onToggleMic={toggleMic}
         onToggleOutput={toggleOutput}
         onToggleScreenShare={async () => {
@@ -229,34 +255,12 @@ export default function App() {
       />
 
       <section className="content-panel">
-        <div className="content-panel__tabs">
-          <button
-            type="button"
-            className={`content-panel__tab ${activePanel === "chat" ? "content-panel__tab--active" : ""}`}
-            onClick={() => {
-              setActivePanel("chat");
-              closeScreenShareView();
-            }}
-          >
-            Genel Chat
-          </button>
-          {hasVisibleScreenShare ? (
-            <button
-              type="button"
-              className={`content-panel__tab ${activePanel === "screen" ? "content-panel__tab--active" : ""}`}
-              onClick={openActiveScreenPanel}
-            >
-              {screenTabLabel ? `${screenTabLabel} yayini` : "Yayin"}
-            </button>
-          ) : null}
-        </div>
-
         {activePanel === "screen" && sharedScreenStream && sharedScreenOwnerTag ? (
           <ScreenSharePanel
             stream={sharedScreenStream}
             ownerTag={sharedScreenOwnerTag}
             isSelf={sharedScreenOwnerId === socketId}
-            onStopSharing={sharedScreenOwnerId === socketId ? toggleScreenShare : undefined}
+            onLeaveView={leaveScreenShareView}
           />
         ) : (
           <GlobalChatPanel

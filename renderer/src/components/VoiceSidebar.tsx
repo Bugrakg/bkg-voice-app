@@ -2,11 +2,14 @@ import type { RoomCounts, RoomMembers, RoomUser, VoiceMode } from "../types";
 import { useEffect, useState } from "react";
 import { IconButton } from "./IconButton";
 import {
+  ChatChannelIcon,
+  ChevronRightIcon,
   ExitIcon,
   HeadphoneIcon,
   HeadphoneOffIcon,
   MicIcon,
   MicOffIcon,
+  ScreenShareOffIcon,
   ScreenShareIcon,
   SettingsIcon
 } from "./icons/AppIcons";
@@ -14,6 +17,7 @@ import { UserRow } from "./UserRow";
 import { ROOMS } from "../constants";
 
 type VoiceSidebarProps = {
+  activePanel: "chat" | "screen";
   roomSummary: string;
   currentRoomId: string | null;
   connectedUsers: RoomUser[];
@@ -33,6 +37,7 @@ type VoiceSidebarProps = {
   supportsOutputRouting: boolean;
   remoteUserVolumes: Record<string, number>;
   onJoinRoom: (room: string) => void | Promise<void>;
+  onOpenChat: () => void;
   onToggleMic: () => void | Promise<void>;
   onToggleOutput: () => void | Promise<void>;
   onToggleScreenShare: () => void | Promise<void>;
@@ -45,6 +50,7 @@ type VoiceSidebarProps = {
 };
 
 export function VoiceSidebar({
+  activePanel,
   roomSummary,
   currentRoomId,
   connectedUsers,
@@ -64,6 +70,7 @@ export function VoiceSidebar({
   supportsOutputRouting,
   remoteUserVolumes,
   onJoinRoom,
+  onOpenChat,
   onToggleMic,
   onToggleOutput,
   onToggleScreenShare,
@@ -76,6 +83,7 @@ export function VoiceSidebar({
 }: VoiceSidebarProps) {
   const logoSrc = `${import.meta.env.BASE_URL}logo.png`;
   const [appVersion, setAppVersion] = useState(window.voiceApp?.appVersion || "");
+  const [collapsedRooms, setCollapsedRooms] = useState<Record<string, boolean>>({});
   const [contextMenu, setContextMenu] = useState<{
     userId: string;
     tag: string;
@@ -101,6 +109,17 @@ export function VoiceSidebar({
     });
   }, []);
 
+  useEffect(() => {
+    if (!currentRoomId) {
+      return;
+    }
+
+    setCollapsedRooms((currentState) => ({
+      ...currentState,
+      [currentRoomId]: false
+    }));
+  }, [currentRoomId]);
+
   return (
     <section className="sidebar sidebar--full">
       <div className="panel-heading">
@@ -117,6 +136,17 @@ export function VoiceSidebar({
       </div>
 
       <div className="room-list">
+        <button
+          type="button"
+          className={`channel-link ${activePanel === "chat" ? "channel-link--active" : ""}`}
+          onClick={onOpenChat}
+        >
+          <span className="channel-link__icon">
+            <ChatChannelIcon />
+          </span>
+          <span className="channel-link__label">genel-chat</span>
+        </button>
+
         {ROOMS.map((room) => {
           const displayedUsers = (currentRoomId === room ? connectedUsers : roomMembers[room] || [])
             .map((user) =>
@@ -134,17 +164,36 @@ export function VoiceSidebar({
               key={room}
               className={`room-group ${currentRoomId === room ? "room-group--active" : ""}`}
             >
-              <button
-                type="button"
+              <div
                 className={`room-button ${currentRoomId === room ? "room-button--active" : ""}`}
-                onClick={() => void onJoinRoom(room)}
-                disabled={isJoining}
               >
-                <span>{room}</span>
-                <small>{roomCounts[room] ?? 0}</small>
-              </button>
+                <button
+                  type="button"
+                  className={`room-button__toggle ${collapsedRooms[room] ? "" : "room-button__toggle--open"}`}
+                  onClick={() =>
+                    setCollapsedRooms((currentState) => ({
+                      ...currentState,
+                      [room]: !currentState[room]
+                    }))
+                  }
+                  aria-label={collapsedRooms[room] ? `${room} odasini ac` : `${room} odasini kapat`}
+                >
+                  <ChevronRightIcon />
+                </button>
+                <button
+                  type="button"
+                  className="room-button__label"
+                  onClick={() => void onJoinRoom(room)}
+                  disabled={isJoining}
+                >
+                  <span>{room}</span>
+                  <small>{roomCounts[room] ?? 0}</small>
+                </button>
+              </div>
 
-              <div className="room-members">
+              <div
+                className={`room-members ${collapsedRooms[room] ? "room-members--collapsed" : ""}`}
+              >
                 {displayedUsers.length > 0 ? (
                   displayedUsers.map((user) => (
                     <UserRow
@@ -207,13 +256,15 @@ export function VoiceSidebar({
             {isOutputEnabled ? <HeadphoneIcon /> : <HeadphoneOffIcon />}
           </IconButton>
 
-          <IconButton
-            label={isScreenSharing ? "Ekran paylasimini durdur" : "Ekran paylas"}
-            onClick={onToggleScreenShare}
-            danger={isScreenSharing}
-          >
-            <ScreenShareIcon />
-          </IconButton>
+          {currentRoomId ? (
+            <IconButton
+              label={isScreenSharing ? "Ekran paylasimini durdur" : "Ekran paylas"}
+              onClick={onToggleScreenShare}
+              danger={isScreenSharing}
+            >
+              {isScreenSharing ? <ScreenShareOffIcon /> : <ScreenShareIcon />}
+            </IconButton>
+          ) : null}
 
           <IconButton label="Ayarlar" onClick={onOpenSettings}>
             <SettingsIcon />
