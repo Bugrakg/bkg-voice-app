@@ -35,6 +35,21 @@ function getStoredValue(key: string) {
   return window.localStorage.getItem(key) || "";
 }
 
+function getOrCreateClientId() {
+  const storedClientId = getStoredValue(STORAGE_KEYS.clientId);
+  if (storedClientId) {
+    return storedClientId;
+  }
+
+  const nextClientId =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `client-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+
+  window.localStorage.setItem(STORAGE_KEYS.clientId, nextClientId);
+  return nextClientId;
+}
+
 function readLabel(device: MediaDeviceInfo, fallback: string) {
   return device.label || `${fallback} ${device.deviceId.slice(0, 4)}`;
 }
@@ -181,6 +196,23 @@ function canRetryAudioSource(error: unknown) {
   return false;
 }
 
+function canRetryScreenShareWithoutAudio(error: unknown) {
+  if (error instanceof DOMException) {
+    return (
+      error.name === "NotReadableError" ||
+      error.name === "AbortError" ||
+      error.name === "OverconstrainedError" ||
+      error.name === "NotAllowedError"
+    );
+  }
+
+  if (error instanceof Error) {
+    return /audio|display|screen/i.test(error.message);
+  }
+
+  return false;
+}
+
 export function useVoiceRoom() {
   const [hasEntered, setHasEntered] = useState(false);
   const [tag, setTagState] = useState(() => getStoredValue(STORAGE_KEYS.tag));
@@ -234,6 +266,7 @@ export function useVoiceRoom() {
   const [sharedScreenStream, setSharedScreenStream] = useState<MediaStream | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
+  const clientIdRef = useRef(getOrCreateClientId());
   const peersRef = useRef<PeerMap>(new Map());
   const screenSendersRef = useRef<Map<string, RTCRtpSender[]>>(new Map());
   const audioElementsRef = useRef<AudioMap>(new Map());
@@ -591,6 +624,9 @@ export function useVoiceRoom() {
     addDiagnosticLog(`Socket baglantisi baslatildi: ${signalingUrl}`);
 
     const socket = io(signalingUrl, {
+      auth: {
+        clientId: clientIdRef.current
+      },
       transports: ["polling", "websocket"],
       upgrade: true,
       rememberUpgrade: false,
@@ -1524,10 +1560,24 @@ export function useVoiceRoom() {
 
     try {
       setError("");
-      const displayStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: true
-      });
+      let displayStream: MediaStream;
+
+      try {
+        displayStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true
+        });
+      } catch (error) {
+        if (!canRetryScreenShareWithoutAudio(error)) {
+          throw error;
+        }
+
+        addDiagnosticLog("Ekran sesi alinamadi, goruntu-only moduna gecildi");
+        displayStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: false
+        });
+      }
 
       localScreenStreamRef.current = displayStream;
       setIsScreenSharing(true);

@@ -1,5 +1,6 @@
 export const ROOMS = ["Genel", "Oyun", "Muzik", "AFK"] as const;
 export const STORAGE_KEYS = {
+  clientId: "voice-app-client-id",
   tag: "voice-app-tag",
   inputDeviceId: "voice-app-input-device-id",
   inputSensitivity: "voice-app-input-sensitivity",

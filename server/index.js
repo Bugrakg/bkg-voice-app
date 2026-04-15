@@ -92,6 +92,7 @@ const io = new Server(server, {
 });
 
 const users = new Map();
+const clientSockets = new Map();
 const chatMessages = loadChatMessages();
 let cachedIceServers = DEFAULT_ICE_SERVERS;
 let cachedIceServersAt = 0;
@@ -210,9 +211,15 @@ async function getIceServers() {
   }
 }
 
-function createDefaultUser(id) {
+function normalizeClientId(value) {
+  const normalizedValue = String(value || "").trim().slice(0, 120);
+  return normalizedValue || "";
+}
+
+function createDefaultUser(id, clientId = "") {
   return {
     id,
+    clientId,
     tag: `guest-${id.slice(0, 4)}`,
     roomId: null,
     micEnabled: true,
@@ -335,8 +342,25 @@ app.get("/ice-servers", async (_req, res) => {
 });
 
 io.on("connection", (socket) => {
+  const clientId = normalizeClientId(socket.handshake?.auth?.clientId);
+  const existingSocketId = clientId ? clientSockets.get(clientId) : "";
+
+  if (existingSocketId && existingSocketId !== socket.id) {
+    const existingSocket = io.sockets.sockets.get(existingSocketId);
+    if (existingSocket) {
+      leaveRoom(existingSocket, "replaced");
+      users.delete(existingSocketId);
+      existingSocket.disconnect(true);
+    } else {
+      users.delete(existingSocketId);
+    }
+  }
+
   console.log(`[socket] connected ${socket.id}`);
-  users.set(socket.id, createDefaultUser(socket.id));
+  users.set(socket.id, createDefaultUser(socket.id, clientId));
+  if (clientId) {
+    clientSockets.set(clientId, socket.id);
+  }
   socket.emit("room-counts", getRoomCounts());
   socket.emit("room-members", getRoomMembers());
   socket.emit("chat-history", chatMessages);
@@ -472,8 +496,12 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log(`[socket] disconnected ${socket.id}`);
+    const user = users.get(socket.id);
     const roomId = leaveRoom(socket, "disconnect");
     users.delete(socket.id);
+    if (user?.clientId && clientSockets.get(user.clientId) === socket.id) {
+      clientSockets.delete(user.clientId);
+    }
     if (roomId) {
       emitUserList(roomId);
     }
