@@ -30,6 +30,7 @@ export default function App() {
     hasEntered,
     inputDevices,
     inputSensitivity,
+    screenShareQuality,
     isJoining,
     isLocallySpeaking,
     isMicEnabled,
@@ -60,6 +61,7 @@ export default function App() {
     changeInputDevice,
     changeOutputDevice,
     changeInputSensitivity,
+    changeScreenShareQuality,
     openMicrophoneSettings,
     sharedScreenOwnerId,
     sharedScreenOwnerTag,
@@ -360,6 +362,7 @@ export default function App() {
           inputDevices={inputDevices}
           outputDevices={outputDevices}
           inputSensitivity={inputSensitivity}
+          screenShareQuality={screenShareQuality}
           supportsOutputRouting={supportsOutputRouting}
           isLocallySpeaking={isLocallySpeaking}
           isPushToTalkActive={isPushToTalkActive}
@@ -377,6 +380,7 @@ export default function App() {
           onChangeVoiceMode={changeVoiceMode}
           onChangePushToTalkKey={changePushToTalkKey}
           onChangeInputSensitivity={changeInputSensitivity}
+          onChangeScreenShareQuality={changeScreenShareQuality}
           />
         ) : null}
 

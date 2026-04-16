@@ -1,4 +1,4 @@
-import type { DeviceOption, VoiceMode } from "../types";
+import type { DeviceOption, ScreenShareQuality, VoiceMode } from "../types";
 import { useEffect, useState } from "react";
 import { CloseIcon } from "./icons/AppIcons";
 
@@ -17,6 +17,7 @@ type SettingsModalProps = {
   socketError: string;
   socketStatus: string;
   voiceMode: VoiceMode;
+  screenShareQuality: ScreenShareQuality;
   onEditableTagChange: (value: string) => void;
   onClose: () => void;
   onSaveTag: () => void | Promise<void>;
@@ -26,6 +27,7 @@ type SettingsModalProps = {
   onChangeVoiceMode: (value: VoiceMode) => void;
   onChangePushToTalkKey: (value: string) => void;
   onChangeInputSensitivity: (value: number) => void;
+  onChangeScreenShareQuality: (value: ScreenShareQuality) => void;
 };
 
 function keyboardEventToShortcut(event: KeyboardEvent) {
@@ -74,6 +76,7 @@ export function SettingsModal({
   socketError,
   socketStatus,
   voiceMode,
+  screenShareQuality,
   onEditableTagChange,
   onClose,
   onSaveTag,
@@ -82,7 +85,8 @@ export function SettingsModal({
   onTestOutput,
   onChangeVoiceMode,
   onChangePushToTalkKey,
-  onChangeInputSensitivity
+  onChangeInputSensitivity,
+  onChangeScreenShareQuality
 }: SettingsModalProps) {
   const [isListeningForShortcut, setIsListeningForShortcut] = useState(false);
 
@@ -182,6 +186,24 @@ export function SettingsModal({
                 </option>
               ))}
             </select>
+          </label>
+
+          <label className="settings-field">
+            <span>Ekran Paylasim Kalitesi</span>
+            <select
+              value={screenShareQuality}
+              onChange={(event) =>
+                onChangeScreenShareQuality(event.target.value as ScreenShareQuality)
+              }
+            >
+              <option value="auto">Otomatik</option>
+              <option value="480p">480p</option>
+              <option value="720p">720p</option>
+            </select>
+            <p className="muted settings-note">
+              Dusuk kalite daha az internet kullanir. Otomatik mod cihazina ve kaynaga gore
+              karar verir.
+            </p>
           </label>
 
           <section className="settings-field">

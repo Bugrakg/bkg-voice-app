@@ -6,6 +6,7 @@ import { getSignalingServerUrl } from "../lib/config";
 import type {
   ChatMessage,
   DeviceOption,
+  ScreenShareQuality,
   RoomCounts,
   RoomMembers,
   RoomPresenceEvent,
@@ -76,6 +77,24 @@ function isEditableTarget(target: EventTarget | null) {
     tagName === "textarea" ||
     tagName === "select"
   );
+}
+
+function keyboardEventMatchesShortcut(event: KeyboardEvent, shortcut: string) {
+  const normalizedShortcut = shortcut.trim().toUpperCase();
+
+  if (!normalizedShortcut) {
+    return false;
+  }
+
+  if (normalizedShortcut === "SPACE") {
+    return event.code === "Space" || event.key === " ";
+  }
+
+  if (/^F([1-9]|1[0-2])$/.test(normalizedShortcut)) {
+    return event.code.toUpperCase() === normalizedShortcut;
+  }
+
+  return event.key.toUpperCase() === normalizedShortcut;
 }
 
 function logPtt(message: string, extra?: unknown) {
@@ -187,6 +206,33 @@ function canRetryScreenShareWithoutAudio(error: unknown) {
   return false;
 }
 
+function getStoredScreenShareQuality(): ScreenShareQuality {
+  const storedValue = getStoredValue(STORAGE_KEYS.screenShareQuality);
+  return storedValue === "480p" || storedValue === "720p" ? storedValue : "auto";
+}
+
+function createScreenShareVideoConstraints(
+  quality: ScreenShareQuality
+): MediaTrackConstraints | true {
+  if (quality === "480p") {
+    return {
+      width: { ideal: 854, max: 854 },
+      height: { ideal: 480, max: 480 },
+      frameRate: { ideal: 24, max: 24 }
+    };
+  }
+
+  if (quality === "720p") {
+    return {
+      width: { ideal: 1280, max: 1280 },
+      height: { ideal: 720, max: 720 },
+      frameRate: { ideal: 30, max: 30 }
+    };
+  }
+
+  return true;
+}
+
 export function useVoiceRoom() {
   const [hasEntered, setHasEntered] = useState(false);
   const [tag, setTagState] = useState(() => getStoredValue(STORAGE_KEYS.tag));
@@ -215,6 +261,9 @@ export function useVoiceRoom() {
   const [selectedOutputDeviceId, setSelectedOutputDeviceId] = useState(() =>
     getStoredValue(STORAGE_KEYS.outputDeviceId)
   );
+  const [screenShareQuality, setScreenShareQuality] = useState<ScreenShareQuality>(
+    () => getStoredScreenShareQuality()
+  );
   const [isJoining, setIsJoining] = useState(false);
   const [supportsOutputRouting, setSupportsOutputRouting] = useState(false);
   const [isLocallySpeaking, setIsLocallySpeaking] = useState(false);
@@ -222,6 +271,7 @@ export function useVoiceRoom() {
     const storedVoiceMode = getStoredValue(STORAGE_KEYS.voiceMode);
     return storedVoiceMode === "push-to-talk" ? "push-to-talk" : "open-mic";
   });
+  const [isGlobalPttReady, setIsGlobalPttReady] = useState(false);
   const [pushToTalkKey, setPushToTalkKeyState] = useState(
     () => getStoredValue(STORAGE_KEYS.pushToTalkKey) || "V"
   );
@@ -260,6 +310,7 @@ export function useVoiceRoom() {
   const voiceModeRef = useRef<VoiceMode>(voiceMode);
   const pushToTalkActiveRef = useRef(isPushToTalkActive);
   const inputSensitivityRef = useRef(inputSensitivity);
+  const screenShareQualityRef = useRef<ScreenShareQuality>(screenShareQuality);
   const microphoneProcessorRef = useRef<ReturnType<
     typeof createMicrophoneProcessor
   > | null>(null);
@@ -347,17 +398,30 @@ export function useVoiceRoom() {
   }, [isPushToTalkActive]);
 
   useEffect(() => {
-    void window.voiceApp?.setPushToTalkShortcut?.(pushToTalkKey).then((result) => {
-      if (!result) {
-        return;
-      }
+    screenShareQualityRef.current = screenShareQuality;
+  }, [screenShareQuality]);
 
-      addDiagnosticLog(
-        result.ok
-          ? `PTT kisayolu kaydedildi: ${result.shortcut}`
-          : `PTT kisayolu kaydedilemedi: ${result.shortcut}`
-      );
-    });
+  useEffect(() => {
+    void window.voiceApp
+      ?.setPushToTalkShortcut?.(pushToTalkKey)
+      .then((result) => {
+        if (!result) {
+          setIsGlobalPttReady(false);
+          return;
+        }
+
+        setIsGlobalPttReady(result.ok);
+        addDiagnosticLog(
+          result.ok
+            ? `PTT kisayolu kaydedildi: ${result.shortcut}`
+            : `PTT kisayolu kaydedilemedi: ${result.shortcut}`
+        );
+      })
+      .catch((error) => {
+        console.error(error);
+        setIsGlobalPttReady(false);
+        addDiagnosticLog("PTT kisayolu kaydi sirasinda hata olustu");
+      });
   }, [pushToTalkKey]);
 
   useEffect(() => {
@@ -393,6 +457,51 @@ export function useVoiceRoom() {
       unsubscribeUp?.();
     };
   }, [pushToTalkKey]);
+
+  useEffect(() => {
+    if (voiceMode !== "push-to-talk" || isGlobalPttReady) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+
+      if (event.repeat) {
+        return;
+      }
+
+      if (!keyboardEventMatchesShortcut(event, pushToTalkKey)) {
+        return;
+      }
+
+      setIsPushToTalkActive(true);
+      addDiagnosticLog(`PTT local fallback aktif: ${pushToTalkKey}`);
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (!keyboardEventMatchesShortcut(event, pushToTalkKey)) {
+        return;
+      }
+
+      setIsPushToTalkActive(false);
+    };
+
+    const handleWindowBlur = () => {
+      setIsPushToTalkActive(false);
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    window.addEventListener("keyup", handleKeyUp, true);
+    window.addEventListener("blur", handleWindowBlur);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("keyup", handleKeyUp, true);
+      window.removeEventListener("blur", handleWindowBlur);
+    };
+  }, [isGlobalPttReady, pushToTalkKey, voiceMode]);
 
   useEffect(() => {
     if (voiceMode !== "push-to-talk") {
@@ -1434,6 +1543,13 @@ export function useVoiceRoom() {
     );
   }
 
+  function changeScreenShareQuality(nextValue: ScreenShareQuality) {
+    const normalizedValue =
+      nextValue === "480p" || nextValue === "720p" ? nextValue : "auto";
+    setScreenShareQuality(normalizedValue);
+    window.localStorage.setItem(STORAGE_KEYS.screenShareQuality, normalizedValue);
+  }
+
   async function startMicTest() {
     setError("");
     setCanOpenMicrophoneSettings(false);
@@ -1504,10 +1620,13 @@ export function useVoiceRoom() {
       }
 
       let displayStream: MediaStream;
+      const videoConstraints = createScreenShareVideoConstraints(
+        screenShareQualityRef.current
+      );
 
       try {
         displayStream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
+          video: videoConstraints,
           audio: true
         });
       } catch (error) {
@@ -1517,7 +1636,7 @@ export function useVoiceRoom() {
 
         addDiagnosticLog("Ekran sesi alinamadi, goruntu-only moduna gecildi");
         displayStream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
+          video: videoConstraints,
           audio: false
         });
       }
@@ -1531,7 +1650,9 @@ export function useVoiceRoom() {
       patchSelfStateLocally({ screenSharing: true });
       socketRef.current?.emit("screen-share-state", true);
       await attachScreenTracksToPeers(displayStream);
-      addDiagnosticLog("Ekran paylasimi baslatildi");
+      addDiagnosticLog(
+        `Ekran paylasimi baslatildi (${screenShareQualityRef.current})`
+      );
 
       const [videoTrack] = displayStream.getVideoTracks();
       videoTrack?.addEventListener("ended", () => {
@@ -1652,6 +1773,7 @@ export function useVoiceRoom() {
     sharedScreenOwnerTag,
     sharedScreenStream,
     inputSensitivity,
+    screenShareQuality,
     selectedInputDeviceId,
     selectedOutputDeviceId,
     setTagState,
@@ -1664,6 +1786,7 @@ export function useVoiceRoom() {
     changeInputDevice,
     changeOutputDevice,
     changeInputSensitivity,
+    changeScreenShareQuality,
     toggleScreenShare,
     startScreenShareWithSource,
     joinScreenShare,

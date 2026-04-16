@@ -29,6 +29,7 @@ export type RoomPresenceEvent = {
 };
 
 export type VoiceMode = "open-mic" | "push-to-talk";
+export type ScreenShareQuality = "auto" | "480p" | "720p";
 export type SocketStatus = "idle" | "connecting" | "connected" | "error";
 export type ChatMessage = {
   id: string;

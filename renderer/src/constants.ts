@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   inputDeviceId: "voice-app-input-device-id",
   inputSensitivity: "voice-app-input-sensitivity",
   outputDeviceId: "voice-app-output-device-id",
+  screenShareQuality: "voice-app-screen-share-quality",
   remoteVolumePrefix: "voice-app-remote-volume",
   remoteVolumeBackupPrefix: "voice-app-remote-volume-backup",
   voiceMode: "voice-app-voice-mode",
