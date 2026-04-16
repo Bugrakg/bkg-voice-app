@@ -97,6 +97,32 @@ function keyboardEventMatchesShortcut(event: KeyboardEvent, shortcut: string) {
   return event.key.toUpperCase() === normalizedShortcut;
 }
 
+function mouseEventMatchesShortcut(event: MouseEvent, shortcut: string) {
+  const normalizedShortcut = shortcut.trim().toUpperCase();
+
+  if (normalizedShortcut === "MOUSELEFT") {
+    return event.button === 0;
+  }
+
+  if (normalizedShortcut === "MOUSEMIDDLE") {
+    return event.button === 1;
+  }
+
+  if (normalizedShortcut === "MOUSERIGHT") {
+    return event.button === 2;
+  }
+
+  if (normalizedShortcut === "MOUSE4") {
+    return event.button === 3;
+  }
+
+  if (normalizedShortcut === "MOUSE5") {
+    return event.button === 4;
+  }
+
+  return false;
+}
+
 function logPtt(message: string, extra?: unknown) {
   void window.voiceApp?.logPtt?.(message, extra);
 
@@ -515,7 +541,7 @@ export function useVoiceRoom() {
             return;
           }
 
-          if (state.shortcut !== pushToTalkKey) {
+          if (state.shortcut.trim().toUpperCase() !== pushToTalkKey.trim().toUpperCase()) {
             return;
           }
 
@@ -568,13 +594,38 @@ export function useVoiceRoom() {
       setPushToTalkState(false, "fallback-window-blur");
     };
 
+    const handleMouseDown = (event: MouseEvent) => {
+      if (isEditableTarget(event.target)) {
+        return;
+      }
+
+      if (!mouseEventMatchesShortcut(event, pushToTalkKey)) {
+        return;
+      }
+
+      setPushToTalkState(true, "fallback-mousedown");
+      addDiagnosticLog(`PTT local fallback aktif: ${pushToTalkKey}`);
+    };
+
+    const handleMouseUp = (event: MouseEvent) => {
+      if (!mouseEventMatchesShortcut(event, pushToTalkKey)) {
+        return;
+      }
+
+      setPushToTalkState(false, "fallback-mouseup");
+    };
+
     window.addEventListener("keydown", handleKeyDown, true);
     window.addEventListener("keyup", handleKeyUp, true);
+    window.addEventListener("mousedown", handleMouseDown, true);
+    window.addEventListener("mouseup", handleMouseUp, true);
     window.addEventListener("blur", handleWindowBlur);
 
     return () => {
       window.removeEventListener("keydown", handleKeyDown, true);
       window.removeEventListener("keyup", handleKeyUp, true);
+      window.removeEventListener("mousedown", handleMouseDown, true);
+      window.removeEventListener("mouseup", handleMouseUp, true);
       window.removeEventListener("blur", handleWindowBlur);
     };
   }, [isGlobalPttReady, pushToTalkKey, voiceMode]);
@@ -1138,6 +1189,22 @@ export function useVoiceRoom() {
       }
 
       if (event.track.kind === "video") {
+        remoteVideoStreamsRef.current.set(remoteUserId, stream);
+
+        if (selectedScreenShareOwnerId === remoteUserId) {
+          const remoteScreenUser = roomUsers.find(
+            (user) => user.id === remoteUserId && user.screenSharing
+          );
+          setSharedScreenOwnerId(remoteUserId);
+          setSharedScreenOwnerTag(remoteScreenUser?.tag || "");
+          setSharedScreenStream(stream);
+        }
+        return;
+      }
+
+      // Screen-share streams may carry their own audio track. Do not route that
+      // through the regular voice audio element, or it can replace the user's mic audio.
+      if (stream.getVideoTracks().length > 0) {
         remoteVideoStreamsRef.current.set(remoteUserId, stream);
 
         if (selectedScreenShareOwnerId === remoteUserId) {

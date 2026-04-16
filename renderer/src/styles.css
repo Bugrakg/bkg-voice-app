@@ -1137,6 +1137,13 @@ select {
   gap: 10px;
 }
 
+.display-picker__hint {
+  margin: -4px 0 2px;
+  color: #8fa1b4;
+  font-size: 0.83rem;
+  line-height: 1.45;
+}
+
 .display-picker__tab {
   display: inline-flex;
   align-items: center;

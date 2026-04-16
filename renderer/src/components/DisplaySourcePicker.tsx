@@ -17,36 +17,19 @@ export function DisplaySourcePicker({
   onClose,
   onSelect
 }: DisplaySourcePickerProps) {
-  const groupedSources = useMemo(
-    () => ({
-      screen: sources.filter((source) => source.kind === "screen"),
-      window: sources.filter((source) => source.kind === "window")
-    }),
+  const screenSources = useMemo(
+    () => sources.filter((source) => source.kind === "screen"),
     [sources]
   );
-  const [activeTab, setActiveTab] = useState<"screen" | "window">("screen");
   const [selectedSourceId, setSelectedSourceId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const preferredTab =
-      groupedSources.screen.length > 0
-        ? "screen"
-        : groupedSources.window.length > 0
-          ? "window"
-          : "screen";
-    const preferredSource =
-      groupedSources[preferredTab][0] ||
-      groupedSources.screen[0] ||
-      groupedSources.window[0] ||
-      null;
+    setSelectedSourceId(screenSources[0]?.id || "");
+  }, [screenSources]);
 
-    setActiveTab(preferredTab);
-    setSelectedSourceId(preferredSource?.id || "");
-  }, [groupedSources]);
-
-  const visibleSources = groupedSources[activeTab];
-  const selectedSource = sources.find((source) => source.id === selectedSourceId) || null;
+  const selectedSource =
+    screenSources.find((source) => source.id === selectedSourceId) || null;
 
   const handleShare = async () => {
     if (!selectedSource || isSubmitting) {
@@ -101,36 +84,13 @@ export function DisplaySourcePicker({
 
         {!isLoading && !error ? (
           <div className="display-picker__layout">
-            <div className="display-picker__tabs" role="tablist" aria-label="Paylasim tipi">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "screen"}
-                className={`display-picker__tab ${
-                  activeTab === "screen" ? "display-picker__tab--active" : ""
-                }`}
-                onClick={() => setActiveTab("screen")}
-              >
-                Ekranlar
-                <span>{groupedSources.screen.length}</span>
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={activeTab === "window"}
-                className={`display-picker__tab ${
-                  activeTab === "window" ? "display-picker__tab--active" : ""
-                }`}
-                onClick={() => setActiveTab("window")}
-              >
-                Pencereler
-                <span>{groupedSources.window.length}</span>
-              </button>
-            </div>
+            <p className="display-picker__hint">
+              Tam ekran oyun paylasmak icin monitor secmek en guvenli yoldur.
+            </p>
 
             <div className="display-picker__grid">
-              {visibleSources.length > 0 ? (
-                visibleSources.map((source) => (
+              {screenSources.length > 0 ? (
+                screenSources.map((source) => (
                   <button
                     key={source.id}
                     type="button"
@@ -170,11 +130,7 @@ export function DisplaySourcePicker({
                 ))
               ) : (
                 <div className="display-picker__state">
-                  <p>
-                    {activeTab === "screen"
-                      ? "Paylasilabilir ekran bulunamadi."
-                      : "Paylasilabilir pencere bulunamadi."}
-                  </p>
+                  <p>Paylasilabilir ekran bulunamadi.</p>
                 </div>
               )}
             </div>

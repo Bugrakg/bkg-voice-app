@@ -365,3 +365,319 @@
 [2026-04-16T17:40:51.860Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":false}
 [2026-04-16T17:40:51.871Z] [renderer] mic closed by ptt
 [2026-04-16T17:40:53.220Z] [renderer] ptt state changed by voice-mode-open-mic {"active":false,"voiceMode":"push-to-talk","micEnabled":false}
+[2026-04-16T17:51:20.645Z] [main] main window created
+[2026-04-16T17:51:20.662Z] [main] webContents did-start-loading
+[2026-04-16T17:51:20.687Z] [main] windows monitor started {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:51:20.842Z] [preload] preload script evaluated
+[2026-04-16T17:51:20.944Z] [main] webContents dom-ready
+[2026-04-16T17:51:20.944Z] [main] webContents did-finish-load {"url":"http://localhost:5173/"}
+[2026-04-16T17:51:20.988Z] [renderer] renderer app mounted
+[2026-04-16T17:51:20.988Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T17:51:20.988Z] [preload] preload subscribed ptt-down
+[2026-04-16T17:51:20.989Z] [preload] preload subscribed ptt-up
+[2026-04-16T17:51:20.992Z] [preload] preload subscribed ptt-down
+[2026-04-16T17:51:20.992Z] [preload] preload subscribed ptt-up
+[2026-04-16T17:51:20.994Z] [main] windows monitor started {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:51:20.994Z] [renderer] renderer app mounted
+[2026-04-16T17:51:20.995Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T17:51:21.001Z] [main] windows monitor started {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:51:21.002Z] [main] windows monitor stopped {"code":null,"signal":"SIGTERM"}
+[2026-04-16T17:51:21.004Z] [main] windows monitor stopped {"code":null,"signal":"SIGTERM"}
+[2026-04-16T17:51:21.016Z] [main] renderer bridge probe {"hasVoiceApp":true,"keys":["versions","platform","debugPtt","nodeEnv","appVersion","serverUrl","onPushToTalkDown","onPushToTalkUp","onPushToTalkDebug","setPushToTalkShortcut","logPtt","getPttLogPath","getPushToTalkState","openMicrophonePrivacySettings","getAppVersion","getUpdaterState","onUpdaterState","openExternalUrl","listDisplaySources","selectDisplaySource"]}
+[2026-04-16T17:51:21.022Z] [preload] preload received ptt-up
+[2026-04-16T17:51:21.023Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T17:51:21.023Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"open-mic","micEnabled":true}
+[2026-04-16T17:51:21.024Z] [preload] preload received ptt-up
+[2026-04-16T17:51:21.024Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T17:51:21.025Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"open-mic","micEnabled":true}
+[2026-04-16T17:52:02.239Z] [renderer] mic closed by ptt
+[2026-04-16T17:52:06.768Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:52:06.769Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T17:52:06.777Z] [preload] preload received ptt-down
+[2026-04-16T17:52:06.777Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T17:52:06.777Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T17:52:06.784Z] [renderer] mic opened by ptt
+[2026-04-16T17:52:07.577Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:52:07.577Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T17:52:07.582Z] [preload] preload received ptt-up
+[2026-04-16T17:52:07.583Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T17:52:07.583Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T17:52:07.589Z] [renderer] mic closed by ptt
+[2026-04-16T17:52:08.994Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:52:08.994Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T17:52:08.999Z] [preload] preload received ptt-down
+[2026-04-16T17:52:09.000Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T17:52:09.000Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T17:52:09.006Z] [renderer] mic opened by ptt
+[2026-04-16T17:52:09.769Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:52:09.770Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T17:52:09.776Z] [preload] preload received ptt-up
+[2026-04-16T17:52:09.776Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T17:52:09.777Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T17:52:09.785Z] [renderer] mic closed by ptt
+[2026-04-16T17:52:11.425Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:52:11.425Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T17:52:11.430Z] [preload] preload received ptt-down
+[2026-04-16T17:52:11.431Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T17:52:11.431Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T17:52:11.437Z] [renderer] mic opened by ptt
+[2026-04-16T17:52:12.640Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:52:12.640Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T17:52:12.645Z] [preload] preload received ptt-up
+[2026-04-16T17:52:12.646Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T17:52:12.646Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T17:52:12.650Z] [renderer] mic closed by ptt
+[2026-04-16T17:52:46.017Z] [renderer] ptt state changed by voice-mode-open-mic {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T17:53:18.538Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:53:18.539Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T17:53:18.547Z] [preload] preload received ptt-down
+[2026-04-16T17:53:18.601Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:53:18.601Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T17:53:18.608Z] [preload] preload received ptt-up
+[2026-04-16T17:53:18.607Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T17:53:18.608Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"open-mic","micEnabled":true}
+[2026-04-16T17:53:19.860Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:53:19.860Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T17:53:19.867Z] [preload] preload received ptt-down
+[2026-04-16T17:53:19.954Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:53:19.954Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T17:53:19.960Z] [preload] preload received ptt-up
+[2026-04-16T17:53:19.960Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T17:53:19.960Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"open-mic","micEnabled":true}
+[2026-04-16T17:58:04.290Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:58:04.290Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T17:58:04.296Z] [preload] preload received ptt-down
+[2026-04-16T17:58:04.381Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:58:04.381Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T17:58:04.387Z] [preload] preload received ptt-up
+[2026-04-16T17:58:04.387Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T17:58:04.387Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"open-mic","micEnabled":true}
+[2026-04-16T17:59:11.048Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:59:11.049Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T17:59:11.055Z] [preload] preload received ptt-down
+[2026-04-16T17:59:11.140Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T17:59:11.141Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T17:59:11.146Z] [preload] preload received ptt-up
+[2026-04-16T17:59:11.146Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T17:59:11.147Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"open-mic","micEnabled":true}
+[2026-04-16T18:02:57.354Z] [main] main window created
+[2026-04-16T18:02:57.367Z] [main] webContents did-start-loading
+[2026-04-16T18:02:57.389Z] [main] windows monitor started {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:02:57.522Z] [preload] preload script evaluated
+[2026-04-16T18:02:57.608Z] [main] webContents dom-ready
+[2026-04-16T18:02:57.608Z] [main] webContents did-finish-load {"url":"http://localhost:5173/"}
+[2026-04-16T18:02:57.654Z] [preload] preload subscribed ptt-down
+[2026-04-16T18:02:57.653Z] [renderer] renderer app mounted
+[2026-04-16T18:02:57.654Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:02:57.655Z] [preload] preload subscribed ptt-up
+[2026-04-16T18:02:57.658Z] [preload] preload subscribed ptt-down
+[2026-04-16T18:02:57.658Z] [preload] preload subscribed ptt-up
+[2026-04-16T18:02:57.659Z] [main] windows monitor started {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:02:57.661Z] [renderer] renderer app mounted
+[2026-04-16T18:02:57.662Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:02:57.667Z] [main] windows monitor started {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:02:57.669Z] [main] windows monitor stopped {"code":null,"signal":"SIGTERM"}
+[2026-04-16T18:02:57.670Z] [main] windows monitor stopped {"code":null,"signal":"SIGTERM"}
+[2026-04-16T18:02:57.680Z] [main] renderer bridge probe {"hasVoiceApp":true,"keys":["versions","platform","debugPtt","nodeEnv","appVersion","serverUrl","onPushToTalkDown","onPushToTalkUp","onPushToTalkDebug","setPushToTalkShortcut","logPtt","getPttLogPath","getPushToTalkState","openMicrophonePrivacySettings","getAppVersion","getUpdaterState","onUpdaterState","openExternalUrl","listDisplaySources","selectDisplaySource"]}
+[2026-04-16T18:02:57.686Z] [preload] preload received ptt-up
+[2026-04-16T18:02:57.686Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:02:57.687Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"open-mic","micEnabled":true}
+[2026-04-16T18:02:57.688Z] [preload] preload received ptt-up
+[2026-04-16T18:02:57.688Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:02:57.688Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"open-mic","micEnabled":true}
+[2026-04-16T18:05:21.961Z] [renderer] mic closed by ptt
+[2026-04-16T18:05:23.113Z] [renderer] ptt state changed by push-to-talk-key-change {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:23.121Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:05:23.121Z] [preload] preload subscribed ptt-down
+[2026-04-16T18:05:23.121Z] [preload] preload subscribed ptt-up
+[2026-04-16T18:05:23.133Z] [preload] preload received ptt-up
+[2026-04-16T18:05:23.137Z] [main] windows monitor started {"shortcut":"MOUSE5","virtualKey":6}
+[2026-04-16T18:05:23.138Z] [main] windows monitor stopped {"code":null,"signal":"SIGTERM"}
+[2026-04-16T18:05:23.139Z] [renderer] renderer received ptt-up {"shortcut":"Mouse5"}
+[2026-04-16T18:05:23.139Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:24.344Z] [renderer] ptt state changed by push-to-talk-key-change {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:24.351Z] [preload] preload subscribed ptt-down
+[2026-04-16T18:05:24.351Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:05:24.352Z] [preload] preload subscribed ptt-up
+[2026-04-16T18:05:24.363Z] [preload] preload received ptt-up
+[2026-04-16T18:05:24.369Z] [main] windows monitor started {"shortcut":"MOUSE4","virtualKey":5}
+[2026-04-16T18:05:24.369Z] [main] windows monitor stopped {"code":null,"signal":"SIGTERM"}
+[2026-04-16T18:05:24.370Z] [renderer] renderer received ptt-up {"shortcut":"Mouse4"}
+[2026-04-16T18:05:24.370Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:25.236Z] [renderer] ptt state changed by push-to-talk-key-change {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:25.243Z] [preload] preload subscribed ptt-down
+[2026-04-16T18:05:25.243Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:05:25.244Z] [preload] preload subscribed ptt-up
+[2026-04-16T18:05:25.248Z] [main] windows monitor started {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:25.252Z] [main] windows monitor stopped {"code":null,"signal":"SIGTERM"}
+[2026-04-16T18:05:25.253Z] [preload] preload received ptt-up
+[2026-04-16T18:05:25.254Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:05:25.254Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:27.606Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:27.607Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T18:05:27.614Z] [preload] preload received ptt-down
+[2026-04-16T18:05:27.614Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T18:05:27.615Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:27.620Z] [renderer] mic opened by ptt
+[2026-04-16T18:05:28.398Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:28.399Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:05:28.404Z] [preload] preload received ptt-up
+[2026-04-16T18:05:28.404Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:05:28.404Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:28.408Z] [renderer] mic closed by ptt
+[2026-04-16T18:05:28.943Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:28.943Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T18:05:28.949Z] [preload] preload received ptt-down
+[2026-04-16T18:05:28.949Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T18:05:28.949Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:28.953Z] [renderer] mic opened by ptt
+[2026-04-16T18:05:29.581Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:29.581Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:05:29.586Z] [preload] preload received ptt-up
+[2026-04-16T18:05:29.586Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:05:29.587Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:29.592Z] [renderer] mic closed by ptt
+[2026-04-16T18:05:30.732Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:30.733Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T18:05:30.738Z] [preload] preload received ptt-down
+[2026-04-16T18:05:30.739Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T18:05:30.739Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:30.746Z] [renderer] mic opened by ptt
+[2026-04-16T18:05:31.623Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:31.624Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:05:31.629Z] [preload] preload received ptt-up
+[2026-04-16T18:05:31.629Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:05:31.630Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:31.634Z] [renderer] mic closed by ptt
+[2026-04-16T18:05:37.501Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:37.502Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T18:05:37.508Z] [preload] preload received ptt-down
+[2026-04-16T18:05:37.508Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T18:05:37.508Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:37.515Z] [renderer] mic opened by ptt
+[2026-04-16T18:05:38.477Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:38.477Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:05:38.483Z] [preload] preload received ptt-up
+[2026-04-16T18:05:38.484Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:05:38.484Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:38.490Z] [renderer] mic closed by ptt
+[2026-04-16T18:05:39.979Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:39.980Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T18:05:39.986Z] [preload] preload received ptt-down
+[2026-04-16T18:05:39.986Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T18:05:39.987Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:39.994Z] [renderer] mic opened by ptt
+[2026-04-16T18:05:40.941Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:40.942Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:05:40.948Z] [preload] preload received ptt-up
+[2026-04-16T18:05:40.948Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:05:40.948Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:40.955Z] [renderer] mic closed by ptt
+[2026-04-16T18:05:41.953Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:41.954Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T18:05:41.977Z] [preload] preload received ptt-down
+[2026-04-16T18:05:41.977Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T18:05:41.978Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:41.998Z] [renderer] mic opened by ptt
+[2026-04-16T18:05:42.621Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:42.622Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:05:42.632Z] [preload] preload received ptt-up
+[2026-04-16T18:05:42.632Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:05:42.633Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:42.639Z] [renderer] mic closed by ptt
+[2026-04-16T18:05:42.902Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:42.903Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T18:05:42.917Z] [preload] preload received ptt-down
+[2026-04-16T18:05:42.918Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T18:05:42.918Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:42.923Z] [renderer] mic opened by ptt
+[2026-04-16T18:05:43.569Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:05:43.569Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:05:43.575Z] [preload] preload received ptt-up
+[2026-04-16T18:05:43.576Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:05:43.576Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:05:43.581Z] [renderer] mic closed by ptt
+[2026-04-16T18:06:23.242Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:06:23.242Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T18:06:23.262Z] [preload] preload received ptt-down
+[2026-04-16T18:06:23.262Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T18:06:23.262Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:06:23.281Z] [renderer] mic opened by ptt
+[2026-04-16T18:06:23.318Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:06:23.319Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:06:23.339Z] [preload] preload received ptt-up
+[2026-04-16T18:06:23.339Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:06:23.340Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:06:23.356Z] [renderer] mic closed by ptt
+[2026-04-16T18:07:14.217Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:07:14.217Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T18:07:14.225Z] [preload] preload received ptt-down
+[2026-04-16T18:07:14.225Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T18:07:14.225Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:07:14.230Z] [renderer] mic opened by ptt
+[2026-04-16T18:07:14.280Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:07:14.280Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:07:14.287Z] [preload] preload received ptt-up
+[2026-04-16T18:07:14.287Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:07:14.287Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:07:14.292Z] [renderer] mic closed by ptt
+[2026-04-16T18:07:18.952Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:07:18.952Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T18:07:18.958Z] [preload] preload received ptt-down
+[2026-04-16T18:07:18.958Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T18:07:18.959Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:07:18.965Z] [renderer] mic opened by ptt
+[2026-04-16T18:07:19.030Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:07:19.030Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:07:19.037Z] [preload] preload received ptt-up
+[2026-04-16T18:07:19.037Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:07:19.038Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:07:19.047Z] [renderer] mic closed by ptt
+[2026-04-16T18:07:36.892Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:07:36.893Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T18:07:36.899Z] [preload] preload received ptt-down
+[2026-04-16T18:07:36.899Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T18:07:36.899Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:07:36.906Z] [renderer] mic opened by ptt
+[2026-04-16T18:07:36.985Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:07:36.985Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:07:36.991Z] [preload] preload received ptt-up
+[2026-04-16T18:07:36.991Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:07:36.992Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:07:36.998Z] [renderer] mic closed by ptt
+[2026-04-16T18:07:46.922Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:07:46.922Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T18:07:46.929Z] [preload] preload received ptt-down
+[2026-04-16T18:07:46.929Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T18:07:46.930Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:07:46.936Z] [renderer] mic opened by ptt
+[2026-04-16T18:07:47.806Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:07:47.807Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:07:47.816Z] [preload] preload received ptt-up
+[2026-04-16T18:07:47.817Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:07:47.817Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:07:47.828Z] [renderer] mic closed by ptt
+[2026-04-16T18:07:48.240Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:07:48.240Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T18:07:48.247Z] [preload] preload received ptt-down
+[2026-04-16T18:07:48.247Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T18:07:48.248Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:07:48.255Z] [renderer] mic opened by ptt
+[2026-04-16T18:07:49.906Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:07:49.906Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:07:49.913Z] [preload] preload received ptt-up
+[2026-04-16T18:07:49.913Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:07:49.913Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:07:49.921Z] [renderer] mic closed by ptt
+[2026-04-16T18:07:50.684Z] [main] windows monitor keydown {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:07:50.684Z] [main] renderer'a ptt-down gonderildi
+[2026-04-16T18:07:50.691Z] [preload] preload received ptt-down
+[2026-04-16T18:07:50.691Z] [renderer] renderer received ptt-down {"shortcut":"V"}
+[2026-04-16T18:07:50.692Z] [renderer] ptt state changed by global-ptt-down {"active":true,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:07:50.699Z] [renderer] mic opened by ptt
+[2026-04-16T18:07:51.837Z] [main] windows monitor keyup {"shortcut":"V","virtualKey":86}
+[2026-04-16T18:07:51.838Z] [main] renderer'a ptt-up gonderildi
+[2026-04-16T18:07:51.844Z] [preload] preload received ptt-up
+[2026-04-16T18:07:51.844Z] [renderer] renderer received ptt-up {"shortcut":"V"}
+[2026-04-16T18:07:51.845Z] [renderer] ptt state changed by global-ptt-up {"active":false,"voiceMode":"push-to-talk","micEnabled":true}
+[2026-04-16T18:07:51.850Z] [renderer] mic closed by ptt

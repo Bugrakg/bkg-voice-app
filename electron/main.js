@@ -24,16 +24,21 @@ const hasGitHubToken = Boolean(process.env.GH_TOKEN);
 let mainWindow = null;
 let pushToTalkShortcut = "V";
 let pushToTalkKeycode = null;
+let pushToTalkMouseButton = null;
 let isPushToTalkPressed = false;
 let uIOhook = null;
 let UiohookKey = null;
 let uiohookStarted = false;
 let keydownListener = null;
 let keyupListener = null;
+let mousedownListener = null;
+let mouseupListener = null;
 let windowsPttMonitor = null;
 let windowsPttMonitorBuffer = "";
 let hasShownUpdateDialog = false;
 let pendingDisplaySourceId = null;
+let pendingDisplaySourceKind = null;
+let cachedDisplaySources = [];
 let pttLogFilePath = null;
 let currentUpdaterState = {
   visible: false,
@@ -119,6 +124,33 @@ function sendPushToTalkDebug(message) {
   mainWindow.webContents.send("ptt-debug", message);
 }
 
+async function listDisplaySourcesInternal() {
+  const sources = await desktopCapturer.getSources({
+    types: ["screen"],
+    thumbnailSize: {
+      width: 640,
+      height: 360
+    },
+    fetchWindowIcons: true
+  });
+
+  cachedDisplaySources = sources;
+
+  return sources.map((source, index) => ({
+    id: source.id,
+    name:
+      source.name?.trim() ||
+      (source.id.startsWith("screen:")
+        ? `Ekran ${index + 1}`
+        : `Adsiz pencere ${index + 1}`),
+    kind: source.id.startsWith("screen:") ? "screen" : "window",
+    thumbnailDataUrl: source.thumbnail.isEmpty()
+      ? ""
+      : source.thumbnail.toDataURL(),
+    appIconDataUrl: source.appIcon?.isEmpty?.() ? "" : source.appIcon?.toDataURL?.() || ""
+  }));
+}
+
 function logPtt(message, extra) {
   writePttLogLine("main", message, extra);
   sendPushToTalkDebug(
@@ -197,34 +229,50 @@ function createMainWindow() {
   window.webContents.session.setDisplayMediaRequestHandler(
     async (request, callback) => {
       try {
-        const sources = await desktopCapturer.getSources({
-          types: ["screen", "window"],
-          thumbnailSize: {
-            width: 640,
-            height: 360
-          },
-          fetchWindowIcons: true
-        });
+        const sources = cachedDisplaySources.length
+          ? cachedDisplaySources
+          : await desktopCapturer.getSources({
+              types: ["screen"],
+              thumbnailSize: {
+                width: 640,
+                height: 360
+              },
+              fetchWindowIcons: true
+            });
         const selectedSource =
           sources.find((source) => source.id === pendingDisplaySourceId) ||
-          sources.find((source) => source.id.startsWith("screen:")) ||
-          sources[0];
+          null;
+        const fallbackSource =
+          sources.find((source) => source.id.startsWith("screen:")) || sources[0] || null;
+        const resolvedSource = selectedSource || fallbackSource;
 
-        if (!selectedSource) {
+        if (!resolvedSource) {
           console.error("[screen-share] no display source found");
           callback({ video: null, audio: false });
           return;
         }
 
+        if (pendingDisplaySourceId && !selectedSource) {
+          console.warn("[screen-share] pending source id was not found in cached sources", {
+            pendingDisplaySourceId,
+            pendingDisplaySourceKind,
+            availableSourceIds: sources.map((source) => source.id)
+          });
+        }
+
         console.log("[screen-share] source selected", {
-          sourceId: selectedSource.id,
-          name: selectedSource.name
+          sourceId: resolvedSource.id,
+          name: resolvedSource.name,
+          requestedSourceId: pendingDisplaySourceId,
+          requestedKind: pendingDisplaySourceKind
         });
 
         callback({
-          video: selectedSource,
+          video: resolvedSource,
           audio:
-            process.platform === "win32" && request.audioRequested
+            process.platform === "win32" &&
+            request.audioRequested &&
+            !resolvedSource.id.startsWith("window:")
               ? "loopback"
               : false
         });
@@ -233,6 +281,8 @@ function createMainWindow() {
         callback({ video: null, audio: false });
       } finally {
         pendingDisplaySourceId = null;
+        pendingDisplaySourceKind = null;
+        cachedDisplaySources = [];
       }
     },
     { useSystemPicker: false }
@@ -280,7 +330,26 @@ function sendPushToTalkEvent(channel) {
 }
 
 function normalizeShortcut(shortcut) {
-  return String(shortcut || "V").trim().toUpperCase() || "V";
+  const normalizedShortcut = String(shortcut || "V").trim().toUpperCase() || "V";
+
+  const aliasMap = {
+    " ": "SPACE",
+    MOUSELEFT: "MOUSELEFT",
+    LEFTMOUSE: "MOUSELEFT",
+    MOUSE1: "MOUSELEFT",
+    MOUSERIGHT: "MOUSERIGHT",
+    RIGHTMOUSE: "MOUSERIGHT",
+    MOUSE2: "MOUSERIGHT",
+    MOUSEMIDDLE: "MOUSEMIDDLE",
+    MIDDLEMOUSE: "MOUSEMIDDLE",
+    MOUSE3: "MOUSEMIDDLE",
+    MOUSE4: "MOUSE4",
+    MOUSE5: "MOUSE5",
+    XBUTTON1: "MOUSE4",
+    XBUTTON2: "MOUSE5"
+  };
+
+  return aliasMap[normalizedShortcut] || normalizedShortcut;
 }
 
 function getPushToTalkKeycode(shortcut) {
@@ -305,6 +374,32 @@ function getPushToTalkKeycode(shortcut) {
   return null;
 }
 
+function getPushToTalkMouseButton(shortcut) {
+  const normalizedShortcut = normalizeShortcut(shortcut);
+
+  if (normalizedShortcut === "MOUSELEFT") {
+    return 1;
+  }
+
+  if (normalizedShortcut === "MOUSERIGHT") {
+    return 2;
+  }
+
+  if (normalizedShortcut === "MOUSEMIDDLE") {
+    return 3;
+  }
+
+  if (normalizedShortcut === "MOUSE4") {
+    return 4;
+  }
+
+  if (normalizedShortcut === "MOUSE5") {
+    return 5;
+  }
+
+  return null;
+}
+
 function getWindowsVirtualKey(shortcut) {
   const normalizedShortcut = normalizeShortcut(shortcut);
 
@@ -319,6 +414,26 @@ function getWindowsVirtualKey(shortcut) {
 
   if (normalizedShortcut === "SPACE") {
     return 0x20;
+  }
+
+  if (normalizedShortcut === "MOUSELEFT") {
+    return 0x01;
+  }
+
+  if (normalizedShortcut === "MOUSERIGHT") {
+    return 0x02;
+  }
+
+  if (normalizedShortcut === "MOUSEMIDDLE") {
+    return 0x04;
+  }
+
+  if (normalizedShortcut === "MOUSE4") {
+    return 0x05;
+  }
+
+  if (normalizedShortcut === "MOUSE5") {
+    return 0x06;
   }
 
   return null;
@@ -459,6 +574,16 @@ function teardownPushToTalkListeners() {
     keyupListener = null;
   }
 
+  if (mousedownListener) {
+    uIOhook.removeListener("mousedown", mousedownListener);
+    mousedownListener = null;
+  }
+
+  if (mouseupListener) {
+    uIOhook.removeListener("mouseup", mouseupListener);
+    mouseupListener = null;
+  }
+
   if (uiohookStarted) {
     uIOhook.stop();
     uiohookStarted = false;
@@ -483,15 +608,16 @@ async function setupPushToTalkListeners() {
   ({ uIOhook, UiohookKey } = uiohookModule);
 
   pushToTalkKeycode = getPushToTalkKeycode(pushToTalkShortcut);
+  pushToTalkMouseButton = getPushToTalkMouseButton(pushToTalkShortcut);
 
-  if (!pushToTalkKeycode) {
+  if (!pushToTalkKeycode && !pushToTalkMouseButton) {
     console.warn(`[ptt] Unsupported push-to-talk key: ${pushToTalkShortcut}`);
     sendPushToTalkDebug(`desteklenmeyen PTT tusu: ${pushToTalkShortcut}`);
     return false;
   }
 
   keydownListener = (event) => {
-    if (event.keycode !== pushToTalkKeycode || isPushToTalkPressed) {
+    if (!pushToTalkKeycode || event.keycode !== pushToTalkKeycode || isPushToTalkPressed) {
       return;
     }
 
@@ -501,7 +627,7 @@ async function setupPushToTalkListeners() {
   };
 
   keyupListener = (event) => {
-    if (event.keycode !== pushToTalkKeycode || !isPushToTalkPressed) {
+    if (!pushToTalkKeycode || event.keycode !== pushToTalkKeycode || !isPushToTalkPressed) {
       return;
     }
 
@@ -510,8 +636,38 @@ async function setupPushToTalkListeners() {
     sendPushToTalkEvent("ptt-up");
   };
 
+  mousedownListener = (event) => {
+    if (
+      !pushToTalkMouseButton ||
+      Number(event.button) !== pushToTalkMouseButton ||
+      isPushToTalkPressed
+    ) {
+      return;
+    }
+
+    isPushToTalkPressed = true;
+    logPtt("mousedown", { shortcut: pushToTalkShortcut, button: event.button });
+    sendPushToTalkEvent("ptt-down");
+  };
+
+  mouseupListener = (event) => {
+    if (
+      !pushToTalkMouseButton ||
+      Number(event.button) !== pushToTalkMouseButton ||
+      !isPushToTalkPressed
+    ) {
+      return;
+    }
+
+    isPushToTalkPressed = false;
+    logPtt("mouseup", { shortcut: pushToTalkShortcut, button: event.button });
+    sendPushToTalkEvent("ptt-up");
+  };
+
   uIOhook.on("keydown", keydownListener);
   uIOhook.on("keyup", keyupListener);
+  uIOhook.on("mousedown", mousedownListener);
+  uIOhook.on("mouseup", mouseupListener);
   try {
     const startResult = uIOhook.start();
 
@@ -520,7 +676,8 @@ async function setupPushToTalkListeners() {
       uiohookStarted = true;
       logPtt("listener started", {
         shortcut: pushToTalkShortcut,
-        keycode: pushToTalkKeycode
+        keycode: pushToTalkKeycode,
+        button: pushToTalkMouseButton
       });
       return true;
     }
@@ -534,7 +691,8 @@ async function setupPushToTalkListeners() {
 
   logPtt("listener started", {
     shortcut: pushToTalkShortcut,
-    keycode: pushToTalkKeycode
+    keycode: pushToTalkKeycode,
+    button: pushToTalkMouseButton
   });
   return true;
 }
@@ -774,24 +932,7 @@ ipcMain.handle("open-external-url", async (_event, url) => {
 
 ipcMain.handle("list-display-sources", async () => {
   try {
-    const sources = await desktopCapturer.getSources({
-      types: ["screen", "window"],
-      thumbnailSize: {
-        width: 640,
-        height: 360
-      },
-      fetchWindowIcons: true
-    });
-
-    return sources.map((source) => ({
-      id: source.id,
-      name: source.name,
-      kind: source.id.startsWith("screen:") ? "screen" : "window",
-      thumbnailDataUrl: source.thumbnail.isEmpty()
-        ? ""
-        : source.thumbnail.toDataURL(),
-      appIconDataUrl: source.appIcon?.isEmpty?.() ? "" : source.appIcon?.toDataURL?.() || ""
-    }));
+    return await listDisplaySourcesInternal();
   } catch (error) {
     console.error("[screen-share] failed to list display sources", error);
     return [];
@@ -801,11 +942,16 @@ ipcMain.handle("list-display-sources", async () => {
 ipcMain.handle("select-display-source", (_event, sourceId) => {
   if (typeof sourceId !== "string" || !sourceId.trim()) {
     pendingDisplaySourceId = null;
+    pendingDisplaySourceKind = null;
     return false;
   }
 
   pendingDisplaySourceId = sourceId;
-  console.log("[screen-share] pending source stored", sourceId);
+  pendingDisplaySourceKind = "screen";
+  console.log("[screen-share] pending source stored", {
+    sourceId,
+    kind: pendingDisplaySourceKind
+  });
   return true;
 });
 

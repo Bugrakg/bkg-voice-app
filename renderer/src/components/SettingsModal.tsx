@@ -61,6 +61,18 @@ function keyboardEventToShortcut(event: KeyboardEvent) {
   return shortcutMap[event.code as keyof typeof shortcutMap] || "";
 }
 
+function mouseEventToShortcut(event: MouseEvent) {
+  const shortcutMap: Record<number, string> = {
+    0: "MouseLeft",
+    1: "MouseMiddle",
+    2: "MouseRight",
+    3: "Mouse4",
+    4: "Mouse5"
+  };
+
+  return shortcutMap[event.button] || "";
+}
+
 export function SettingsModal({
   editableTag,
   selectedInputDeviceId,
@@ -112,8 +124,24 @@ export function SettingsModal({
       setIsListeningForShortcut(false);
     };
 
+    const handleMouseDown = (event: MouseEvent) => {
+      event.preventDefault();
+
+      const shortcut = mouseEventToShortcut(event);
+      if (!shortcut) {
+        return;
+      }
+
+      onChangePushToTalkKey(shortcut);
+      setIsListeningForShortcut(false);
+    };
+
     window.addEventListener("keydown", handleKeyDown, true);
-    return () => window.removeEventListener("keydown", handleKeyDown, true);
+    window.addEventListener("mousedown", handleMouseDown, true);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+      window.removeEventListener("mousedown", handleMouseDown, true);
+    };
   }, [isListeningForShortcut, onChangePushToTalkKey]);
 
   return (
@@ -269,7 +297,7 @@ export function SettingsModal({
               </div>
             ) : null}
             <p className="muted settings-note">
-              Uygulama arka plandayken de secilen tusa basili tuttugun surece mikrofon acik kalir.
+              Klavye tuslariyla birlikte mouse sol, sag, orta, Mouse4 ve Mouse5 tuslari da atanabilir.
             </p>
           </section>
 
