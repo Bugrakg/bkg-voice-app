@@ -359,6 +359,20 @@ select {
   display: flex;
 }
 
+.screen-panel__surface--fullscreen {
+  border-radius: 0;
+  border: 0;
+  background: #020406;
+}
+
+.screen-panel__surface:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border-radius: 0;
+  border: 0;
+  background: #020406;
+}
+
 .screen-panel__video {
   width: 100%;
   height: 100%;
@@ -1107,10 +1121,59 @@ select {
   margin: 0;
 }
 
+.display-picker__layout {
+  display: grid;
+  gap: 18px;
+}
+
+.display-picker__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.display-picker__tabs {
+  display: inline-flex;
+  gap: 10px;
+}
+
+.display-picker__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #dce6ef;
+}
+
+.display-picker__tab span {
+  min-width: 22px;
+  height: 22px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #9fb0c1;
+  font-size: 0.78rem;
+}
+
+.display-picker__tab--active {
+  border-color: rgba(126, 231, 135, 0.32);
+  background: rgba(126, 231, 135, 0.1);
+  color: #eff8f0;
+}
+
+.display-picker__tab--active span {
+  background: rgba(126, 231, 135, 0.22);
+  color: #bdf4c4;
+}
+
 .display-picker__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
 }
 
 .display-picker__source {
@@ -1133,12 +1196,19 @@ select {
   transform: translateY(-1px);
 }
 
+.display-picker__source--selected {
+  border-color: rgba(126, 231, 135, 0.42);
+  background: rgba(126, 231, 135, 0.11);
+  box-shadow: 0 0 0 1px rgba(126, 231, 135, 0.18);
+}
+
 .display-picker__preview {
   aspect-ratio: 16 / 9;
   background: #0b0f13;
   display: grid;
   place-items: center;
   overflow: hidden;
+  max-height: 120px;
 }
 
 .display-picker__preview img {
@@ -1159,13 +1229,13 @@ select {
 
 .display-picker__meta {
   display: grid;
-  gap: 6px;
-  padding: 14px 16px 16px;
+  gap: 4px;
+  padding: 10px 12px 12px;
 }
 
 .display-picker__meta span {
   color: #94a3b8;
-  font-size: 0.82rem;
+  font-size: 0.76rem;
 }
 
 .display-picker__title-row {
@@ -1179,6 +1249,7 @@ select {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 0.9rem;
 }
 
 .display-picker__app-icon {
@@ -1186,6 +1257,35 @@ select {
   height: 18px;
   flex: 0 0 auto;
   border-radius: 4px;
+}
+
+.display-picker__actions--footer {
+  margin-top: 4px;
+}
+
+.display-picker__submit {
+  min-width: 180px;
+  background: #3a4048;
+  color: #b6c0cb;
+}
+
+.display-picker__submit:hover:not(:disabled) {
+  background: #474f58;
+}
+
+.display-picker__submit--ready {
+  background: #1f5a31;
+  color: #eaf8ed;
+}
+
+.display-picker__submit--ready:hover:not(:disabled) {
+  background: #2a7440;
+}
+
+.display-picker__submit:disabled {
+  cursor: not-allowed;
+  opacity: 1;
+  transform: none;
 }
 
 .settings-field,
@@ -1444,6 +1544,15 @@ select {
   .settings-inline {
     grid-template-columns: 1fr;
     display: grid;
+  }
+
+  .display-picker__actions {
+    justify-content: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .display-picker__actions .control-button {
+    width: 100%;
   }
 
   .sidebar-actions {

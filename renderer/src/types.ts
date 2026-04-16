@@ -86,6 +86,12 @@ declare global {
       listDisplaySources?: () => Promise<DisplaySource[]>;
       selectDisplaySource?: (sourceId: string) => Promise<boolean>;
       onPushToTalkDebug?: (callback: (message: string) => void) => () => void;
+      logPtt?: (message: string, extra?: unknown) => Promise<boolean>;
+      getPttLogPath?: () => Promise<string>;
+      getPushToTalkState?: () => Promise<{
+        pressed: boolean;
+        shortcut: string;
+      }>;
       versions: {
         chrome: string;
         electron: string;

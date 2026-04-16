@@ -1,4 +1,6 @@
 const path = require("path");
+const fs = require("fs");
+const { spawn } = require("child_process");
 const {
   app,
   BrowserWindow,
@@ -10,6 +12,11 @@ const {
 } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const packageJson = require("../package.json");
+
+// Keep renderer-side audio/PTT reactions alive even when the window is unfocused.
+app.commandLine.appendSwitch("disable-renderer-backgrounding");
+app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
+app.commandLine.appendSwitch("disable-background-timer-throttling");
 
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
 const debugPtt = process.env.DEBUG_PTT === "true";
@@ -23,8 +30,11 @@ let UiohookKey = null;
 let uiohookStarted = false;
 let keydownListener = null;
 let keyupListener = null;
+let windowsPttMonitor = null;
+let windowsPttMonitorBuffer = "";
 let hasShownUpdateDialog = false;
 let pendingDisplaySourceId = null;
+let pttLogFilePath = null;
 let currentUpdaterState = {
   visible: false,
   status: "idle",
@@ -46,6 +56,30 @@ function sendUpdaterState(nextState) {
   }
 
   mainWindow.webContents.send("updater-state", currentUpdaterState);
+}
+
+function getPttLogFilePath() {
+  if (pttLogFilePath) {
+    return pttLogFilePath;
+  }
+
+  const baseDirectory = path.join(process.cwd(), ".codex-logs");
+  fs.mkdirSync(baseDirectory, { recursive: true });
+  pttLogFilePath = path.join(baseDirectory, "ptt-debug.log");
+  return pttLogFilePath;
+}
+
+function writePttLogLine(source, message, extra) {
+  const timestamp = new Date().toISOString();
+  const payload =
+    typeof extra === "undefined" ? "" : ` ${JSON.stringify(extra)}`;
+  const line = `[${timestamp}] [${source}] ${message}${payload}\n`;
+
+  try {
+    fs.appendFileSync(getPttLogFilePath(), line, "utf8");
+  } catch (error) {
+    console.error("[ptt] failed to write log file", error);
+  }
 }
 
 function loadUiohookModule() {
@@ -86,6 +120,7 @@ function sendPushToTalkDebug(message) {
 }
 
 function logPtt(message, extra) {
+  writePttLogLine("main", message, extra);
   sendPushToTalkDebug(
     typeof extra === "undefined" ? message : `${message} ${JSON.stringify(extra)}`
   );
@@ -117,11 +152,48 @@ function createMainWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: false,
       backgroundThrottling: false
     }
   });
 
   mainWindow = window;
+  logPtt("main window created");
+  window.webContents.on("did-start-loading", () => {
+    logPtt("webContents did-start-loading");
+  });
+  window.webContents.on("dom-ready", () => {
+    logPtt("webContents dom-ready");
+  });
+  window.webContents.on("did-finish-load", () => {
+    logPtt("webContents did-finish-load", {
+      url: window.webContents.getURL()
+    });
+    void window.webContents
+      .executeJavaScript(
+        "({ hasVoiceApp: Boolean(window.voiceApp), keys: window.voiceApp ? Object.keys(window.voiceApp) : [] })",
+        true
+      )
+      .then((result) => {
+        logPtt("renderer bridge probe", result);
+      })
+      .catch((error) => {
+        logPtt("renderer bridge probe failed", {
+          message: error?.message || String(error)
+        });
+      });
+  });
+  window.webContents.on(
+    "did-fail-load",
+    (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
+      logPtt("webContents did-fail-load", {
+        errorCode,
+        errorDescription,
+        validatedURL,
+        isMainFrame
+      });
+    }
+  );
   window.webContents.session.setDisplayMediaRequestHandler(
     async (request, callback) => {
       try {
@@ -233,7 +305,146 @@ function getPushToTalkKeycode(shortcut) {
   return null;
 }
 
+function getWindowsVirtualKey(shortcut) {
+  const normalizedShortcut = normalizeShortcut(shortcut);
+
+  if (/^[A-Z]$/.test(normalizedShortcut)) {
+    return normalizedShortcut.charCodeAt(0);
+  }
+
+  const functionKeyMatch = normalizedShortcut.match(/^F([1-9]|1[0-2])$/);
+  if (functionKeyMatch) {
+    return 0x70 + Number(functionKeyMatch[1]) - 1;
+  }
+
+  if (normalizedShortcut === "SPACE") {
+    return 0x20;
+  }
+
+  return null;
+}
+
+function stopWindowsPushToTalkMonitor() {
+  if (!windowsPttMonitor) {
+    return;
+  }
+
+  windowsPttMonitorBuffer = "";
+  windowsPttMonitor.kill();
+  windowsPttMonitor = null;
+}
+
+function setupWindowsPushToTalkMonitor() {
+  stopWindowsPushToTalkMonitor();
+
+  const virtualKey = getWindowsVirtualKey(pushToTalkShortcut);
+  if (!virtualKey) {
+    console.warn(`[ptt] Unsupported Windows push-to-talk key: ${pushToTalkShortcut}`);
+    sendPushToTalkDebug(`desteklenmeyen Windows PTT tusu: ${pushToTalkShortcut}`);
+    return false;
+  }
+
+  const monitorScript = `
+Add-Type @"
+using System.Runtime.InteropServices;
+public static class Win32Keyboard {
+  [DllImport("user32.dll")]
+  public static extern short GetAsyncKeyState(int vKey);
+}
+"@
+$virtualKey = ${virtualKey}
+$isPressed = $false
+while ($true) {
+  $nextPressed = ([Win32Keyboard]::GetAsyncKeyState($virtualKey) -band 0x8000) -ne 0
+  if ($nextPressed -ne $isPressed) {
+    if ($nextPressed) {
+      [Console]::Out.WriteLine("down")
+    } else {
+      [Console]::Out.WriteLine("up")
+    }
+    [Console]::Out.Flush()
+    $isPressed = $nextPressed
+  }
+  Start-Sleep -Milliseconds 12
+}
+`.trim();
+
+  const child = spawn(
+    "powershell.exe",
+    [
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-WindowStyle",
+      "Hidden",
+      "-Command",
+      monitorScript
+    ],
+    {
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true
+    }
+  );
+
+  child.stdout.setEncoding("utf8");
+  child.stdout.on("data", (chunk) => {
+    windowsPttMonitorBuffer += chunk;
+
+    const lines = windowsPttMonitorBuffer.split(/\r?\n/);
+    windowsPttMonitorBuffer = lines.pop() || "";
+
+    for (const line of lines) {
+      const message = line.trim().toLowerCase();
+
+      if (message === "down" && !isPushToTalkPressed) {
+        isPushToTalkPressed = true;
+        logPtt("windows monitor keydown", {
+          shortcut: pushToTalkShortcut,
+          virtualKey
+        });
+        sendPushToTalkEvent("ptt-down");
+      }
+
+      if (message === "up" && isPushToTalkPressed) {
+        isPushToTalkPressed = false;
+        logPtt("windows monitor keyup", {
+          shortcut: pushToTalkShortcut,
+          virtualKey
+        });
+        sendPushToTalkEvent("ptt-up");
+      }
+    }
+  });
+
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk) => {
+    const message = String(chunk || "").trim();
+    if (message) {
+      console.error("[ptt] windows monitor error", message);
+      sendPushToTalkDebug(`Windows PTT monitor hata verdi: ${message}`);
+    }
+  });
+
+  child.on("exit", (code, signal) => {
+    logPtt("windows monitor stopped", { code, signal });
+
+    if (windowsPttMonitor === child) {
+      windowsPttMonitor = null;
+      windowsPttMonitorBuffer = "";
+    }
+  });
+
+  windowsPttMonitor = child;
+  logPtt("windows monitor started", {
+    shortcut: pushToTalkShortcut,
+    virtualKey
+  });
+  return true;
+}
+
 function teardownPushToTalkListeners() {
+  stopWindowsPushToTalkMonitor();
+
   if (!uIOhook) {
     return;
   }
@@ -256,6 +467,13 @@ function teardownPushToTalkListeners() {
 
 async function setupPushToTalkListeners() {
   teardownPushToTalkListeners();
+
+  if (process.platform === "win32") {
+    const windowsMonitorStarted = setupWindowsPushToTalkMonitor();
+    if (windowsMonitorStarted) {
+      return true;
+    }
+  }
 
   const uiohookModule = loadUiohookModule();
   if (!uiohookModule) {
@@ -493,6 +711,10 @@ app.whenReady().then(async () => {
   });
 });
 
+app.on("before-quit", () => {
+  teardownPushToTalkListeners();
+});
+
 ipcMain.handle("set-push-to-talk-shortcut", async (_event, shortcut) => {
   pushToTalkShortcut = normalizeShortcut(shortcut);
   pushToTalkKeycode = null;
@@ -516,6 +738,24 @@ ipcMain.handle("get-app-version", () => {
 
 ipcMain.handle("get-updater-state", () => {
   return currentUpdaterState;
+});
+
+ipcMain.handle("ptt-log", (_event, payload) => {
+  const entry =
+    payload && typeof payload === "object" ? payload : { message: String(payload || "") };
+  writePttLogLine("renderer", entry.message || "", entry.extra);
+  return true;
+});
+
+ipcMain.handle("get-ptt-log-path", () => {
+  return getPttLogFilePath();
+});
+
+ipcMain.handle("get-push-to-talk-state", () => {
+  return {
+    pressed: isPushToTalkPressed,
+    shortcut: pushToTalkShortcut
+  };
 });
 
 ipcMain.handle("open-external-url", async (_event, url) => {

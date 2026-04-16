@@ -20,6 +20,10 @@ const INITIAL_UPDATER_STATE: UpdaterState = {
 };
 
 export default function App() {
+  useEffect(() => {
+    void window.voiceApp?.logPtt?.("renderer app mounted");
+  }, []);
+
   const {
     connectedUsers,
     canOpenMicrophoneSettings,
@@ -160,9 +164,14 @@ export default function App() {
   };
 
   const handleDisplaySourceSelect = async (sourceId: string) => {
-    openActiveScreenPanel();
+    const started = await startScreenShareWithSource(sourceId);
+
+    if (!started) {
+      return;
+    }
+
     closeDisplayPicker();
-    await startScreenShareWithSource(sourceId);
+    openActiveScreenPanel();
   };
 
   useEffect(() => {

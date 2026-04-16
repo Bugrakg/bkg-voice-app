@@ -98,6 +98,8 @@ function keyboardEventMatchesShortcut(event: KeyboardEvent, shortcut: string) {
 }
 
 function logPtt(message: string, extra?: unknown) {
+  void window.voiceApp?.logPtt?.(message, extra);
+
   if (!window.voiceApp?.debugPtt) {
     return;
   }
@@ -402,26 +404,66 @@ export function useVoiceRoom() {
   }, [screenShareQuality]);
 
   useEffect(() => {
-    void window.voiceApp
-      ?.setPushToTalkShortcut?.(pushToTalkKey)
-      .then((result) => {
-        if (!result) {
-          setIsGlobalPttReady(false);
+    let disposed = false;
+    let retryTimerId: number | null = null;
+    let attemptCount = 0;
+
+    const registerShortcut = async () => {
+      attemptCount += 1;
+
+      try {
+        const result = await window.voiceApp?.setPushToTalkShortcut?.(pushToTalkKey);
+
+        if (disposed) {
           return;
         }
 
-        setIsGlobalPttReady(result.ok);
-        addDiagnosticLog(
-          result.ok
-            ? `PTT kisayolu kaydedildi: ${result.shortcut}`
-            : `PTT kisayolu kaydedilemedi: ${result.shortcut}`
-        );
-      })
-      .catch((error) => {
+        if (!result?.ok) {
+          setIsGlobalPttReady(false);
+          addDiagnosticLog(
+            `PTT kisayolu kaydedilemedi (${attemptCount}/4): ${
+              result?.shortcut || pushToTalkKey
+            }`
+          );
+
+          if (attemptCount < 4) {
+            retryTimerId = window.setTimeout(() => {
+              void registerShortcut();
+            }, 1200);
+          }
+
+          return;
+        }
+
+        setIsGlobalPttReady(true);
+        addDiagnosticLog(`PTT kisayolu kaydedildi: ${result.shortcut}`);
+      } catch (error) {
         console.error(error);
+
+        if (disposed) {
+          return;
+        }
+
         setIsGlobalPttReady(false);
-        addDiagnosticLog("PTT kisayolu kaydi sirasinda hata olustu");
-      });
+        addDiagnosticLog(`PTT kisayolu kaydi sirasinda hata olustu (${attemptCount}/4)`);
+
+        if (attemptCount < 4) {
+          retryTimerId = window.setTimeout(() => {
+            void registerShortcut();
+          }, 1200);
+        }
+      }
+    };
+
+    void registerShortcut();
+
+    return () => {
+      disposed = true;
+
+      if (retryTimerId !== null) {
+        window.clearTimeout(retryTimerId);
+      }
+    };
   }, [pushToTalkKey]);
 
   useEffect(() => {
@@ -441,12 +483,12 @@ export function useVoiceRoom() {
       }
 
       logPtt("renderer received ptt-down", { shortcut: pushToTalkKey });
-      setIsPushToTalkActive(true);
+      setPushToTalkState(true, "global-ptt-down");
     };
 
     const handlePushToTalkUp = () => {
       logPtt("renderer received ptt-up", { shortcut: pushToTalkKey });
-      setIsPushToTalkActive(false);
+      setPushToTalkState(false, "global-ptt-up");
     };
 
     const unsubscribeDown = window.voiceApp?.onPushToTalkDown?.(handlePushToTalkDown);
@@ -457,6 +499,40 @@ export function useVoiceRoom() {
       unsubscribeUp?.();
     };
   }, [pushToTalkKey]);
+
+  useEffect(() => {
+    if (voiceMode !== "push-to-talk") {
+      return;
+    }
+
+    let disposed = false;
+
+    const timerId = window.setInterval(() => {
+      void window.voiceApp
+        ?.getPushToTalkState?.()
+        .then((state) => {
+          if (disposed || !state) {
+            return;
+          }
+
+          if (state.shortcut !== pushToTalkKey) {
+            return;
+          }
+
+          if (pushToTalkActiveRef.current === state.pressed) {
+            return;
+          }
+
+          setPushToTalkState(state.pressed, "main-poll");
+        })
+        .catch(() => undefined);
+    }, 40);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(timerId);
+    };
+  }, [pushToTalkKey, voiceMode]);
 
   useEffect(() => {
     if (voiceMode !== "push-to-talk" || isGlobalPttReady) {
@@ -476,7 +552,7 @@ export function useVoiceRoom() {
         return;
       }
 
-      setIsPushToTalkActive(true);
+      setPushToTalkState(true, "fallback-keydown");
       addDiagnosticLog(`PTT local fallback aktif: ${pushToTalkKey}`);
     };
 
@@ -485,11 +561,11 @@ export function useVoiceRoom() {
         return;
       }
 
-      setIsPushToTalkActive(false);
+      setPushToTalkState(false, "fallback-keyup");
     };
 
     const handleWindowBlur = () => {
-      setIsPushToTalkActive(false);
+      setPushToTalkState(false, "fallback-window-blur");
     };
 
     window.addEventListener("keydown", handleKeyDown, true);
@@ -566,6 +642,22 @@ export function useVoiceRoom() {
     }
 
     return true;
+  }
+
+  function setPushToTalkState(nextActive: boolean, source: string) {
+    pushToTalkActiveRef.current = nextActive;
+    setIsPushToTalkActive(nextActive);
+    logPtt(`ptt state changed by ${source}`, {
+      active: nextActive,
+      voiceMode: voiceModeRef.current,
+      micEnabled: micEnabledRef.current
+    });
+    applyMicTransmissionState();
+
+    if (!nextActive) {
+      setIsLocallySpeaking(false);
+      socketRef.current?.emit("speaking-state", false);
+    }
   }
 
   function applyMicTransmissionState() {
@@ -1584,14 +1676,14 @@ export function useVoiceRoom() {
     window.localStorage.setItem(STORAGE_KEYS.voiceMode, nextVoiceMode);
 
     if (nextVoiceMode === "open-mic") {
-      setIsPushToTalkActive(false);
+      setPushToTalkState(false, "voice-mode-open-mic");
     }
   }
 
   function changePushToTalkKey(nextKey: string) {
     setPushToTalkKeyState(nextKey);
     window.localStorage.setItem(STORAGE_KEYS.pushToTalkKey, nextKey);
-    setIsPushToTalkActive(false);
+    setPushToTalkState(false, "push-to-talk-key-change");
   }
 
   function sendChatMessage(text: string) {
@@ -1606,7 +1698,7 @@ export function useVoiceRoom() {
   async function startScreenShare(sourceId?: string) {
     if (!currentRoomId) {
       setError("Ekran paylasimi icin once bir odaya baglanman gerekiyor.");
-      return;
+      return false;
     }
 
     try {
@@ -1658,10 +1750,12 @@ export function useVoiceRoom() {
       videoTrack?.addEventListener("ended", () => {
         void stopScreenShare();
       });
+      return true;
     } catch (error) {
       console.error(error);
       addDiagnosticLog("Ekran paylasimi baslatilamadi");
       setError("Ekran paylasimi baslatilamadi. Lutfen tekrar dene.");
+      return false;
     }
   }
 
@@ -1698,7 +1792,7 @@ export function useVoiceRoom() {
   }
 
   async function startScreenShareWithSource(sourceId: string) {
-    await startScreenShare(sourceId);
+    return startScreenShare(sourceId);
   }
 
   function joinScreenShare(userId: string) {

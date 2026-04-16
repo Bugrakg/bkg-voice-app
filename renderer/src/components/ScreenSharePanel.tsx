@@ -23,6 +23,7 @@ export function ScreenSharePanel({
   const surfaceRef = useRef<HTMLDivElement | null>(null);
   const [screenVolume, setScreenVolume] = useState(100);
   const [previousVolume, setPreviousVolume] = useState(100);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const hasAudioTrack = stream.getAudioTracks().length > 0;
 
   useEffect(() => {
@@ -44,6 +45,19 @@ export function ScreenSharePanel({
     element.muted = isSelf || screenVolume === 0;
   }, [isSelf, screenVolume, stream]);
 
+  useEffect(() => {
+    const updateFullscreenState = () => {
+      const target = surfaceRef.current;
+      setIsFullscreen(Boolean(target && document.fullscreenElement === target));
+    };
+
+    document.addEventListener("fullscreenchange", updateFullscreenState);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", updateFullscreenState);
+    };
+  }, []);
+
   const toggleScreenAudio = () => {
     if (screenVolume === 0) {
       setScreenVolume(previousVolume > 0 ? previousVolume : 100);
@@ -54,13 +68,24 @@ export function ScreenSharePanel({
     setScreenVolume(0);
   };
 
-  const openFullscreen = async () => {
+  const toggleFullscreen = async () => {
     const target = surfaceRef.current;
-    if (!target || document.fullscreenElement) {
+    if (!target) {
       return;
     }
 
-    await target.requestFullscreen?.();
+    if (document.fullscreenElement === target) {
+      await document.exitFullscreen?.();
+      return;
+    }
+
+    if (document.fullscreenElement) {
+      await document.exitFullscreen?.();
+    }
+
+    await target.requestFullscreen?.({ navigationUI: "hide" }).catch(async () => {
+      await target.requestFullscreen?.();
+    });
   };
 
   return (
@@ -74,7 +99,12 @@ export function ScreenSharePanel({
         </div>
       ) : null}
 
-      <div className="screen-panel__surface" ref={surfaceRef}>
+      <div
+        className={`screen-panel__surface ${
+          isFullscreen ? "screen-panel__surface--fullscreen" : ""
+        }`}
+        ref={surfaceRef}
+      >
         <video
           key={`${ownerTag}-${stream.id}`}
           ref={videoRef}
@@ -82,6 +112,7 @@ export function ScreenSharePanel({
           autoPlay
           playsInline
           muted={isSelf}
+          onDoubleClick={() => void toggleFullscreen()}
         />
 
         {!isSelf ? (
@@ -89,9 +120,9 @@ export function ScreenSharePanel({
             <button
               type="button"
               className="screen-panel__control-button"
-              onClick={() => void openFullscreen()}
-              aria-label="Tam ekran"
-              title="Tam ekran"
+              onClick={() => void toggleFullscreen()}
+              aria-label={isFullscreen ? "Tam ekrandan cik" : "Tam ekran"}
+              title={isFullscreen ? "Tam ekrandan cik" : "Tam ekran"}
             >
               <FullscreenIcon />
             </button>
