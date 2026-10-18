@@ -159,7 +159,9 @@ function getFriendlyMicrophoneError(error: unknown) {
   ) {
     return {
       message:
-        "Mikrofon izni kapali görünüyor. Windows ayarlarından mikrofon erişimini açıp tekrar dene.",
+        window.voiceApp?.platform === "darwin"
+          ? "Mikrofon izni kapali görünüyor. Sistem Ayarları > Gizlilik ve Güvenlik > Mikrofon bölümünden erişimi açıp tekrar dene."
+          : "Mikrofon izni kapali görünüyor. Windows ayarlarından mikrofon erişimini açıp tekrar dene.",
       canOpenSettings: true
     };
   }

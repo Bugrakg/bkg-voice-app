@@ -15,6 +15,7 @@
     "build": "npm run build --prefix renderer",
     "rebuild:native": "electron-builder install-app-deps",
     "dist:win": "npm run build && electron-builder --win nsis",
+    "dist:mac": "npm run build && electron-builder --mac dmg --arm64 --publish never",
     "dist:dir": "npm run build && electron-builder --dir",
     "postinstall": "node -e \"if(process.env.RENDER){console.log('Skipping electron-builder install-app-deps on Render');process.exit(0)};let builderPath='';try{builderPath=require.resolve('electron-builder/out/cli/cli.js')}catch(error){console.log('Skipping electron-builder install-app-deps because electron-builder is unavailable');process.exit(0)};const {spawnSync}=require('child_process');const result=spawnSync(process.execPath,[builderPath,'install-app-deps'],{stdio:'inherit'});process.exit(result.status ?? 0)\""
   },
@@ -50,6 +51,20 @@
       "provider": "github",
       "owner": "Bugrakg",
       "repo": "bkg-voice-app"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.social-networking",
+      "icon": "renderer/public/logo.png",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "BKG Voice App sesli odalarda konusabilmen icin mikrofonuna erisir.",
+        "NSCameraUsageDescription": "BKG Voice App kamera erisimi istemez; sistem uyumlulugu icin gereklidir."
+      }
     },
     "win": {
       "target": [

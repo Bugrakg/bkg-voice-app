@@ -8,7 +8,8 @@ const {
   dialog,
   ipcMain,
   Menu,
-  shell
+  shell,
+  systemPreferences
 } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const packageJson = require("../package.json");
@@ -19,6 +20,7 @@ app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
 app.commandLine.appendSwitch("disable-background-timer-throttling");
 
 const isDev = Boolean(process.env.ELECTRON_RENDERER_URL);
+const isMac = process.platform === "darwin";
 const debugPtt = process.env.DEBUG_PTT === "true";
 const hasGitHubToken = Boolean(process.env.GH_TOKEN);
 let mainWindow = null;
@@ -40,6 +42,8 @@ let pendingDisplaySourceId = null;
 let pendingDisplaySourceKind = null;
 let cachedDisplaySources = [];
 let pttLogFilePath = null;
+let hasPromptedAccessibility = false;
+let accessibilityPollTimer = null;
 let currentUpdaterState = {
   visible: false,
   status: "idle",
@@ -68,7 +72,10 @@ function getPttLogFilePath() {
     return pttLogFilePath;
   }
 
-  const baseDirectory = path.join(process.cwd(), ".codex-logs");
+  // Packaged macOS apps start with cwd "/", which is not writable.
+  const baseDirectory = app.isPackaged
+    ? app.getPath("logs")
+    : path.join(process.cwd(), ".codex-logs");
   fs.mkdirSync(baseDirectory, { recursive: true });
   pttLogFilePath = path.join(baseDirectory, "ptt-debug.log");
   return pttLogFilePath;
@@ -169,9 +176,73 @@ function logPtt(message, extra) {
   console.log(`[ptt] ${message}`, extra);
 }
 
-function createMainWindow() {
-  Menu.setApplicationMenu(null);
+function setupApplicationMenu() {
+  if (!isMac) {
+    Menu.setApplicationMenu(null);
+    return;
+  }
 
+  // macOS needs an app menu for Cmd+Q and Cmd+C/V/X/A shortcuts to work.
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      { role: "appMenu" },
+      { role: "editMenu" },
+      { role: "windowMenu" }
+    ])
+  );
+}
+
+async function requestMacMediaPermissions() {
+  if (!isMac) {
+    return;
+  }
+
+  try {
+    const microphoneStatus = systemPreferences.getMediaAccessStatus("microphone");
+    if (microphoneStatus === "not-determined") {
+      await systemPreferences.askForMediaAccess("microphone");
+    }
+  } catch (error) {
+    console.error("[permissions] microphone access request failed", error);
+  }
+}
+
+function ensureMacAccessibilityAccess() {
+  if (!isMac) {
+    return true;
+  }
+
+  // Global key/mouse hooks need Accessibility access; passing true shows the system prompt.
+  const trusted = systemPreferences.isTrustedAccessibilityClient(!hasPromptedAccessibility);
+  hasPromptedAccessibility = true;
+
+  if (trusted) {
+    return true;
+  }
+
+  logPtt("macOS accessibility access missing");
+  sendPushToTalkDebug(
+    "Bas-konus icin Sistem Ayarlari > Gizlilik ve Guvenlik > Erisilebilirlik'ten izin ver"
+  );
+
+  // Start the global hook as soon as the user grants access, without an app restart.
+  if (!accessibilityPollTimer) {
+    accessibilityPollTimer = setInterval(() => {
+      if (!systemPreferences.isTrustedAccessibilityClient(false)) {
+        return;
+      }
+
+      clearInterval(accessibilityPollTimer);
+      accessibilityPollTimer = null;
+      logPtt("macOS accessibility access granted");
+      void setupPushToTalkListeners();
+    }, 2000);
+  }
+
+  return false;
+}
+
+function createMainWindow() {
   const window = new BrowserWindow({
     width: 1080,
     height: 860,
@@ -600,6 +671,10 @@ async function setupPushToTalkListeners() {
     }
   }
 
+  if (!ensureMacAccessibilityAccess()) {
+    return false;
+  }
+
   const uiohookModule = loadUiohookModule();
   if (!uiohookModule) {
     return false;
@@ -712,7 +787,7 @@ async function openMicrophonePrivacySettings() {
       return true;
     }
 
-    if (process.platform === "darwin") {
+    if (isMac) {
       await shell.openExternal(
         "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
       );
@@ -728,6 +803,12 @@ async function openMicrophonePrivacySettings() {
 function setupAutoUpdates() {
   if (isDev) {
     console.log("[updater] Development mode detected, auto-update disabled.");
+    return;
+  }
+
+  // Releases only ship Windows installers, and unsigned macOS builds cannot self-update.
+  if (isMac) {
+    console.log("[updater] macOS build detected, auto-update disabled.");
     return;
   }
 
@@ -858,7 +939,9 @@ function setupAutoUpdates() {
 }
 
 app.whenReady().then(async () => {
+  setupApplicationMenu();
   createMainWindow();
+  void requestMacMediaPermissions();
   await setupPushToTalkListeners();
   setupAutoUpdates();
 
@@ -870,6 +953,10 @@ app.whenReady().then(async () => {
 });
 
 app.on("before-quit", () => {
+  if (accessibilityPollTimer) {
+    clearInterval(accessibilityPollTimer);
+    accessibilityPollTimer = null;
+  }
   teardownPushToTalkListeners();
 });
 
@@ -956,7 +1043,7 @@ ipcMain.handle("select-display-source", (_event, sourceId) => {
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
+  if (!isMac) {
     app.quit();
   }
 });
